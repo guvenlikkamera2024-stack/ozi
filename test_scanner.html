@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binance Futures Scanner - Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #d1d4dc;
+            min-height: 100vh;
+        }
+        .glass-effect {
+            background: rgba(30, 34, 45, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .loader {
+            border-top-color: #3b82f6;
+            animation: spinner 1.5s linear infinite;
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6 lg:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
+                <i class="fas fa-chart-line text-blue-400 mr-3"></i>
+                Binance Futures Scanner
+            </h1>
+            <p class="text-gray-400 text-lg">AI-powered momentum analysis</p>
+        </header>
+
+        <!-- Control Panel -->
+        <div class="glass-effect p-6 rounded-xl mb-6 shadow-2xl">
+            <h2 class="text-xl font-semibold text-white mb-4">Scanner Controls</h2>
+            <div class="flex flex-wrap gap-4">
+                <button id="quickScanBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300">
+                    <i class="fas fa-bolt mr-2"></i>Quick Scan
+                </button>
+                <button id="deepScanBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300">
+                    <i class="fas fa-search-plus mr-2"></i>Deep Scan
+                </button>
+                <button id="aiScanBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300">
+                    <i class="fas fa-brain mr-2"></i>AI Scan
+                </button>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div id="status" class="text-center my-6"></div>
+        
+        <!-- Loader -->
+        <div id="loader" class="hidden flex justify-center items-center my-8">
+            <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-500 h-12 w-12"></div>
+            <p class="ml-4 text-gray-300">Scanning...</p>
+        </div>
+
+        <!-- Results Table -->
+        <div class="glass-effect p-6 rounded-xl shadow-2xl">
+            <h2 class="text-xl font-semibold text-white mb-4">Scan Results</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-700">
+                    <thead class="bg-gray-800/50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">Symbol</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-300 uppercase">Price</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase">Score</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase">Signal</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase">RSI</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase">Momentum</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTable" class="bg-gray-900/50 divide-y divide-gray-800">
+                        <!-- Results will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = 'https://fapi.binance.com';
+        const CONCURRENCY_LIMIT = 10;
+
+        // DOM elements
+        const loader = document.getElementById('loader');
+        const statusEl = document.getElementById('status');
+        const resultsTable = document.getElementById('resultsTable');
+
+        // Utility functions
+        function sigmoid(x) {
+            return 2.0 / (1.0 + Math.exp(-x)) - 1.0;
+        }
+
+        function calculateRSI(prices, period = 14) {
+            if (prices.length < period + 1) return 50;
+            let gains = 0, losses = 0;
+            for (let i = 1; i <= period; i++) {
+                const change = prices[i] - prices[i - 1];
+                if (change > 0) gains += change;
+                else losses -= change;
+            }
+            const avgGain = gains / period;
+            const avgLoss = losses / period;
+            const rs = avgGain / (avgLoss || 0.0001);
+            return 100 - (100 / (1 + rs));
+        }
+
+        function calculateMomentum(prices, period = 14) {
+            if (prices.length < period) return 0;
+            const current = prices[prices.length - 1];
+            const past = prices[prices.length - period];
+            return ((current - past) / past) * 100;
+        }
+
+        // API functions
+        async function getSymbols() {
+            try {
+                const response = await fetch(`${API_BASE}/fapi/v1/exchangeInfo`);
+                const data = await response.json();
+                return data.symbols
+                    .filter(s => s.contractType === 'PERPETUAL' && s.quoteAsset === 'USDT' && !s.symbol.includes('_'))
+                    .map(s => s.symbol);
+            } catch (error) {
+                console.error('Failed to fetch symbols:', error);
+                statusEl.innerHTML = '<div class="text-red-500">Error: Unable to fetch symbols</div>';
+                return [];
+            }
+        }
+
+        async function getKlineData(symbol, interval, limit = 50) {
+            try {
+                const response = await fetch(`${API_BASE}/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`);
+                if (!response.ok) throw new Error(`API request failed: ${response.status}`);
+                return await response.json();
+            } catch (error) {
+                console.error(`Failed to fetch ${symbol} ${interval} data:`, error);
+                return [];
+            }
+        }
+
+        // Scan functions
+        async function startQuickScan() {
+            loader.classList.remove('hidden');
+            statusEl.innerHTML = '<div class="text-blue-400">Quick scan started...</div>';
+            resultsTable.innerHTML = '';
+
+            try {
+                const symbols = await getSymbols();
+                if (symbols.length === 0) {
+                    statusEl.innerHTML = '<div class="text-red-500">No symbols found</div>';
+                    return;
+                }
+
+                const quickSymbols = symbols.slice(0, 20);
+                statusEl.innerHTML = `<div class="text-blue-400">Scanning ${quickSymbols.length} symbols...</div>`;
+
+                for (const symbol of quickSymbols) {
+                    await processSymbol(symbol, 'quick');
+                }
+
+                statusEl.innerHTML = '<div class="text-green-500">Quick scan completed!</div>';
+            } catch (error) {
+                console.error('Quick scan error:', error);
+                statusEl.innerHTML = '<div class="text-red-500">Quick scan failed</div>';
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+
+        async function startDeepScan() {
+            loader.classList.remove('hidden');
+            statusEl.innerHTML = '<div class="text-indigo-400">Deep scan started...</div>';
+            resultsTable.innerHTML = '';
+
+            try {
+                const symbols = await getSymbols();
+                if (symbols.length === 0) {
+                    statusEl.innerHTML = '<div class="text-red-500">No symbols found</div>';
+                    return;
+                }
+
+                statusEl.innerHTML = `<div class="text-indigo-400">Scanning ${symbols.length} symbols...</div>`;
+
+                for (let i = 0; i < symbols.length; i += CONCURRENCY_LIMIT) {
+                    const batch = symbols.slice(i, i + CONCURRENCY_LIMIT);
+                    const promises = batch.map(symbol => processSymbol(symbol, 'deep'));
+                    await Promise.all(promises);
+
+                    const progress = Math.round(((i + CONCURRENCY_LIMIT) / symbols.length) * 100);
+                    statusEl.innerHTML = `<div class="text-indigo-400">Progress: ${Math.min(100, progress)}%</div>`;
+                }
+
+                statusEl.innerHTML = '<div class="text-green-500">Deep scan completed!</div>';
+            } catch (error) {
+                console.error('Deep scan error:', error);
+                statusEl.innerHTML = '<div class="text-red-500">Deep scan failed</div>';
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+
+        async function startAIScan() {
+            loader.classList.remove('hidden');
+            statusEl.innerHTML = '<div class="text-purple-400">AI scan started...</div>';
+            resultsTable.innerHTML = '';
+
+            try {
+                const symbols = await getSymbols();
+                if (symbols.length === 0) {
+                    statusEl.innerHTML = '<div class="text-red-500">No symbols found</div>';
+                    return;
+                }
+
+                const aiSymbols = symbols.slice(0, 30);
+                statusEl.innerHTML = `<div class="text-purple-400">AI analyzing ${aiSymbols.length} symbols...</div>`;
+
+                for (const symbol of aiSymbols) {
+                    await processSymbol(symbol, 'ai');
+                }
+
+                statusEl.innerHTML = '<div class="text-green-500">AI scan completed!</div>';
+            } catch (error) {
+                console.error('AI scan error:', error);
+                statusEl.innerHTML = '<div class="text-red-500">AI scan failed</div>';
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+
+        async function processSymbol(symbol, scanType) {
+            try {
+                const data = await getKlineData(symbol, '5m', 50);
+                if (data.length < 10) return;
+
+                const prices = data.map(d => parseFloat(d[4]));
+                const volumes = data.map(d => parseFloat(d[5]));
+                const currentPrice = prices[prices.length - 1];
+
+                // Calculate indicators
+                const rsi = calculateRSI(prices);
+                const momentum = calculateMomentum(prices);
+                
+                // Calculate score based on scan type
+                let score = 50;
+                if (scanType === 'quick') {
+                    score = 50 + (momentum * 2);
+                } else if (scanType === 'deep') {
+                    score = (rsi * 0.5) + (50 + momentum * 2) * 0.5;
+                } else if (scanType === 'ai') {
+                    // AI-enhanced scoring
+                    const priceChange = (currentPrice - prices[prices.length - 10]) / prices[prices.length - 10];
+                    const volumeChange = volumes.length > 10 ? (volumes[volumes.length - 1] - volumes[volumes.length - 10]) / volumes[volumes.length - 10] : 0;
+                    score = (rsi * 0.3) + (50 + momentum * 2) * 0.4 + (50 + priceChange * 100) * 0.3;
+                }
+
+                // Determine signal
+                let signal = 'NEUTRAL';
+                if (score > 70) signal = 'BUY';
+                else if (score < 30) signal = 'SELL';
+
+                updateRow(symbol, currentPrice, score, signal, rsi, momentum);
+            } catch (error) {
+                console.error(`Error processing ${symbol}:`, error);
+            }
+        }
+
+        function updateRow(symbol, price, score, signal, rsi, momentum) {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-800/50';
+            
+            const signalColor = signal === 'BUY' ? 'text-green-400' : signal === 'SELL' ? 'text-red-400' : 'text-gray-400';
+            const scoreColor = score > 70 ? 'text-green-400' : score < 30 ? 'text-red-400' : 'text-gray-300';
+            
+            row.innerHTML = `
+                <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-white">
+                    <a href="https://www.binance.com/tr/futures/${symbol}" target="_blank" class="text-blue-400 hover:text-blue-300 hover:underline">${symbol}</a>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-300">${price.toFixed(4)}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-center font-bold ${scoreColor}">${score.toFixed(1)}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-center font-bold ${signalColor}">${signal}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-300">${rsi.toFixed(1)}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-300">${momentum.toFixed(2)}%</td>
+            `;
+            
+            resultsTable.appendChild(row);
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Scanner initialized');
+            
+            document.getElementById('quickScanBtn').addEventListener('click', startQuickScan);
+            document.getElementById('deepScanBtn').addEventListener('click', startDeepScan);
+            document.getElementById('aiScanBtn').addEventListener('click', startAIScan);
+        });
+    </script>
+</body>
+</html>
