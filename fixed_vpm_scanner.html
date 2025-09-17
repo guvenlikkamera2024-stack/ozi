@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced VPM Binance Scanner - Fixed</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary-bg: #0a0e1a;
+            --secondary-bg: #131722;
+            --tertiary-bg: #1e222d;
+            --accent-blue: #2962ff;
+            --accent-green: #00c851;
+            --accent-red: #ff4444;
+            --accent-gold: #ffd700;
+            --text-primary: #ffffff;
+            --text-secondary: #b2b5be;
+            --border-color: #2a2e39;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+        }
+
+        /* VPM Styling */
+        .vpm-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 20px;
+            position: relative;
+        }
+
+        .glass {
+            background: rgba(30, 34, 45, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+
+        .glass-strong {
+            background: rgba(19, 23, 34, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+        }
+
+        .enhanced-score {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .score-ring {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, var(--accent-red) 0%, var(--accent-gold) 50%, var(--accent-green) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            position: relative;
+        }
+
+        .score-ring::before {
+            content: '';
+            width: 50px;
+            height: 50px;
+            background: var(--tertiary-bg);
+            border-radius: 50%;
+            position: absolute;
+        }
+
+        .score-value {
+            position: relative;
+            z-index: 1;
+            font-size: 14px;
+            font-weight: 800;
+            color: white;
+        }
+
+        .usd-flow-meter {
+            background: var(--tertiary-bg);
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .usd-amount {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--accent-gold);
+        }
+
+        .volume-flow {
+            display: flex;
+            align-items: center;
+            margin: 4px 0;
+        }
+
+        .buyer-volume {
+            background: linear-gradient(90deg, transparent, var(--accent-green));
+            height: 4px;
+            border-radius: 2px;
+            margin-right: 4px;
+        }
+
+        .seller-volume {
+            background: linear-gradient(90deg, var(--accent-red), transparent);
+            height: 4px;
+            border-radius: 2px;
+        }
+
+        .mtf-labyrinth {
+            background: linear-gradient(45deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .timeframe-path {
+            height: 6px;
+            border-radius: 3px;
+            margin: 8px 0;
+            position: relative;
+            background: rgba(255,255,255,0.2);
+        }
+
+        .path-signal {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .signal-long { background: var(--accent-green); }
+        .signal-short { background: var(--accent-red); }
+        .signal-neutral { background: #6b7280; }
+
+        .interactive {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .interactive:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .pulse-glow {
+            animation: pulseGlow 2s infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(102, 126, 234, 0.8); }
+        }
+
+        .loader {
+            border-top-color: var(--accent-blue);
+            animation: spinner 1.5s linear infinite;
+        }
+
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .table-container {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: var(--secondary-bg);
+            border-radius: 10px;
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--accent-blue), var(--accent-green));
+            border-radius: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .desktop-only { display: none !important; }
+        }
+    </style>
+</head>
+
+<body class="p-4 md:p-6 lg:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="mb-6 text-center">
+            <div class="flex items-center justify-center space-x-4 mb-4">
+                <div class="w-16 h-16 vpm-container flex items-center justify-center pulse-glow">
+                    <span class="text-2xl font-bold text-white">VPM</span>
+                </div>
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold text-white">Advanced VPM Scanner</h1>
+                    <p class="text-sm text-gray-400">Volume • Price • Momentum System</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+            <div class="glass interactive p-4">
+                <div class="enhanced-score">
+                    <div class="score-ring">
+                        <div class="score-value" id="vpmIndex">--</div>
+                    </div>
+                    <p class="text-xs text-white font-semibold">VPM Index</p>
+                </div>
+            </div>
+
+            <div class="glass interactive p-4">
+                <div class="usd-flow-meter">
+                    <p class="text-sm text-gray-300 mb-1">USD Flow</p>
+                    <div class="usd-amount" id="usdFlow">$0M</div>
+                    <div class="volume-flow mt-2">
+                        <div class="buyer-volume flex-1" style="width: 50%"></div>
+                        <div class="seller-volume flex-1" style="width: 50%"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Buyer/Seller</p>
+                </div>
+            </div>
+
+            <div class="glass interactive p-4 text-center">
+                <p class="text-sm text-gray-400">Market Regime</p>
+                <p class="text-xl font-bold text-green-400" id="marketRegime">Analyzing...</p>
+                <p class="text-xs text-gray-400 mt-1">AI Assessment</p>
+            </div>
+
+            <div class="glass interactive p-4 text-center">
+                <p class="text-sm text-gray-400">Signal Quality</p>
+                <p class="text-2xl font-bold text-purple-400" id="signalQuality">--%</p>
+                <div class="w-full bg-gray-700 rounded-full h-2 mt-2">
+                    <div class="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-500" id="qualityBar" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="glass interactive p-4 text-center">
+                <p class="text-sm text-gray-400">Active Signals</p>
+                <p class="text-2xl font-bold text-yellow-400" id="activeSignals">0</p>
+                <p class="text-xs text-green-400 mt-1">Ready to scan</p>
+            </div>
+        </div>
+
+        <!-- MTF Labyrinth -->
+        <div class="glass-strong p-6 mb-6">
+            <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+                <i class="fas fa-route text-purple-400 mr-2"></i>
+                Multi-Timeframe Labyrinth Status
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="mtf-labyrinth">
+                    <h4 class="text-sm font-medium text-white mb-3">1H Path</h4>
+                    <div class="timeframe-path">
+                        <div class="path-signal signal-neutral" id="path1h" style="width: 50%"></div>
+                    </div>
+                    <p class="text-xs text-gray-700 mt-2" id="path1hStatus">Waiting for data...</p>
+                </div>
+
+                <div class="mtf-labyrinth">
+                    <h4 class="text-sm font-medium text-white mb-3">2H Path</h4>
+                    <div class="timeframe-path">
+                        <div class="path-signal signal-neutral" id="path2h" style="width: 50%"></div>
+                    </div>
+                    <p class="text-xs text-gray-700 mt-2" id="path2hStatus">Waiting for data...</p>
+                </div>
+
+                <div class="mtf-labyrinth">
+                    <h4 class="text-sm font-medium text-white mb-3">4H Path</h4>
+                    <div class="timeframe-path">
+                        <div class="path-signal signal-neutral" id="path4h" style="width: 50%"></div>
+                    </div>
+                    <p class="text-xs text-gray-700 mt-2" id="path4hStatus">Waiting for data...</p>
+                </div>
+            </div>
+            
+            <div class="mt-4 p-3 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-lg border border-blue-500/30">
+                <p class="text-sm text-white" id="labyrinthStatus">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    <strong>Status:</strong> Ready for analysis
+                </p>
+            </div>
+        </div>
+
+        <!-- Historical Analysis -->
+        <div class="glass-strong p-4 rounded-lg mb-6 shadow-lg">
+            <h2 class="text-lg font-semibold text-white mb-3 border-b border-gray-700 pb-2 flex items-center">
+                <i class="fas fa-history text-blue-400 mr-2"></i>
+                VPM Historical Analysis
+            </h2>
+            <form id="historicalForm" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                <div>
+                    <label for="symbolInput" class="block text-sm font-medium text-gray-300 mb-1">Symbol</label>
+                    <input type="text" id="symbolInput" name="symbol" placeholder="BTCUSDT" 
+                           class="w-full bg-gray-800 text-white border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div>
+                    <label for="dateInput" class="block text-sm font-medium text-gray-300 mb-1">Date</label>
+                    <input type="date" id="dateInput" name="date" 
+                           class="w-full bg-gray-800 text-white border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div>
+                    <label for="timeInput" class="block text-sm font-medium text-gray-300 mb-1">Time</label>
+                    <input type="time" id="timeInput" name="time" 
+                           class="w-full bg-gray-800 text-white border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div>
+                    <label for="vpmModeSelect" class="block text-sm font-medium text-gray-300 mb-1">Mode</label>
+                    <select id="vpmModeSelect" class="w-full bg-gray-800 text-white border border-gray-600 rounded-md px-3 py-2">
+                        <option value="standard">Standard</option>
+                        <option value="enhanced">Enhanced</option>
+                        <option value="premium">Premium</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">
+                    <i class="fas fa-search mr-1"></i> Analyze
+                </button>
+            </form>
+            <div id="historicalResult" class="mt-4"></div>
+        </div>
+
+        <!-- Scanner Panel -->
+        <div class="glass-strong p-4 rounded-lg shadow-lg">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 border-b border-gray-700 pb-3 gap-4">
+                <h2 class="text-lg font-semibold text-white flex items-center">
+                    <i class="fas fa-radar text-green-400 mr-2"></i>
+                    VPM Live Scanner
+                </h2>
+                <div class="flex items-center gap-3">
+                    <select id="scanModeSelect" class="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white">
+                        <option value="standard">Standard VPM</option>
+                        <option value="enhanced">Enhanced VPM</option>
+                        <option value="premium">Premium Quality</option>
+                    </select>
+                    <button id="vpmScanBtn" class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">
+                        <i class="fas fa-play mr-1"></i> Start Scan
+                    </button>
+                </div>
+            </div>
+            
+            <div id="status" class="text-center my-4"></div>
+
+            <div id="loader" class="hidden flex justify-center items-center my-8">
+                <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-500 h-12 w-12"></div>
+                <p class="ml-4 text-gray-300">VPM analyzing market data...</p>
+            </div>
+
+            <!-- Results Table -->
+            <div class="table-container">
+                <table class="min-w-full divide-y divide-gray-700">
+                    <thead class="bg-gray-800 sticky top-0 z-10">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">Symbol</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-300 uppercase">Price</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase">VPM Score</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase">USD Flow</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase">Quality</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase">Signal</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase">1h</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase desktop-only">2h</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase">4h</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase">1d</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTable" class="bg-gray-900 divide-y divide-gray-800">
+                        <!-- Results will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            API_BASE: 'https://fapi.binance.com',
+            KLINE_LIMIT: 100,
+            MOM_LENGTH: 14,
+            TIME_FRAMES: ['1h', '2h', '4h', '1d'],
+            TIME_FRAME_WEIGHTS: { '1h': 1, '2h': 2, '4h': 4, '1d': 6 },
+            CONCURRENCY_LIMIT: 10
+        };
+
+        // Global state
+        let isScanning = false;
+        let scanResults = [];
+
+        // DOM Elements
+        const elements = {
+            loader: document.getElementById('loader'),
+            status: document.getElementById('status'),
+            resultsTable: document.getElementById('resultsTable'),
+            vmpScanBtn: document.getElementById('vmpScanBtn'),
+            scanModeSelect: document.getElementById('scanModeSelect'),
+            historicalForm: document.getElementById('historicalForm'),
+            historicalResult: document.getElementById('historicalResult'),
+            vpmIndex: document.getElementById('vmpIndex'),
+            usdFlow: document.getElementById('usdFlow'),
+            marketRegime: document.getElementById('marketRegime'),
+            signalQuality: document.getElementById('signalQuality'),
+            activeSignals: document.getElementById('activeSignals'),
+            qualityBar: document.getElementById('qualityBar'),
+            labyrinthStatus: document.getElementById('labyrinthStatus')
+        };
+
+        // VPM Calculator
+        class VPMCalculator {
+            calculateVPM(data) {
+                if (!data || data.length < 20) {
+                    return {
+                        vmpScore: 50,
+                        buyerVolume: 0,
+                        sellerVolume: 0,
+                        usdFlow: 0,
+                        quality: 0.5,
+                        buyerRatio: 0.5
+                    };
+                }
+
+                const closes = data.map(d => parseFloat(d[4]));
+                const highs = data.map(d => parseFloat(d[2]));
+                const lows = data.map(d => parseFloat(d[3]));
+                const volumes = data.map(d => parseFloat(d[5]));
+
+                let totalBuyerVolume = 0;
+                let totalSellerVolume = 0;
+
+                // Calculate buyer/seller volumes using Ozican's method
+                for (let i = 0; i < data.length; i++) {
+                    const high = highs[i];
+                    const low = lows[i];
+                    const close = closes[i];
+                    const volume = volumes[i];
+
+                    if (high !== low) {
+                        const buyerVol = volume * (close - low) / (high - low) * close;
+                        const sellerVol = volume * (high - close) / (high - low) * close;
+                        
+                        totalBuyerVolume += buyerVol;
+                        totalSellerVolume += sellerVol;
+                    }
+                }
+
+                const totalVolume = totalBuyerVolume + totalSellerVolume;
+                const buyerRatio = totalVolume > 0 ? totalBuyerVolume / totalVolume : 0.5;
+                
+                // USD Flow estimation
+                const avgPrice = closes.reduce((a, b) => a + b, 0) / closes.length;
+                const usdFlow = totalVolume * avgPrice;
+
+                // VPM Score calculation
+                const volumeStrength = Math.min(usdFlow / 1000000, 2); // Normalize to $1M
+                const priceStrength = this.calculatePriceStrength(closes);
+                const momentumStrength = this.calculateMomentumStrength(closes, volumes);
+
+                const vmpScore = (
+                    (buyerRatio * 40) +
+                    (volumeStrength * 30) +
+                    (priceStrength * 15) +
+                    (momentumStrength * 15)
+                );
+
+                const quality = this.calculateQuality(data);
+
+                return {
+                    vmpScore: Math.min(100, Math.max(0, vmpScore)),
+                    buyerVolume: totalBuyerVolume,
+                    sellerVolume: totalSellerVolume,
+                    usdFlow: usdFlow,
+                    quality: quality,
+                    buyerRatio: buyerRatio
+                };
+            }
+
+            calculatePriceStrength(closes) {
+                if (closes.length < 10) return 0.5;
+                
+                const recent = closes.slice(-10);
+                const older = closes.slice(-20, -10);
+                
+                const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+                const olderAvg = older.reduce((a, b) => a + b, 0) / older.length;
+                
+                const change = (recentAvg - olderAvg) / olderAvg;
+                return Math.min(1, Math.max(0, (change + 0.1) * 5)); // Normalize to 0-1
+            }
+
+            calculateMomentumStrength(closes, volumes) {
+                if (closes.length < 5) return 0.5;
+                
+                const priceChange = (closes[closes.length - 1] - closes[closes.length - 5]) / closes[closes.length - 5];
+                const volumeChange = (volumes[volumes.length - 1] - volumes[volumes.length - 5]) / volumes[volumes.length - 5];
+                
+                const correlation = priceChange * volumeChange > 0 ? 1 : 0;
+                return correlation * Math.min(1, Math.abs(priceChange) * 10);
+            }
+
+            calculateQuality(data) {
+                if (!data || data.length < 10) return 0.3;
+                
+                const completeness = Math.min(1, data.length / 100);
+                const consistency = this.calculateConsistency(data);
+                
+                return (completeness + consistency) / 2;
+            }
+
+            calculateConsistency(data) {
+                const volumes = data.map(d => parseFloat(d[5]));
+                const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+                
+                let variance = 0;
+                for (let vol of volumes) {
+                    variance += Math.pow(vol - avgVolume, 2);
+                }
+                variance = variance / volumes.length;
+                
+                const stdDev = Math.sqrt(variance);
+                const cv = avgVolume > 0 ? stdDev / avgVolume : 1;
+                
+                return Math.max(0, 1 - cv); // Lower coefficient of variation = higher consistency
+            }
+        }
+
+        // Initialize VMP Calculator
+        const vmpCalculator = new VPMCalculator();
+
+        // API Functions
+        async function getSymbols() {
+            try {
+                showStatus('Fetching symbols from Binance...', 'info');
+                const response = await fetch(`${CONFIG.API_BASE}/fapi/v1/exchangeInfo`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                const symbols = data.symbols
+                    .filter(s => s.contractType === 'PERPETUAL' && s.quoteAsset === 'USDT' && !s.symbol.includes('_'))
+                    .map(s => s.symbol)
+                    .slice(0, 50); // Limit for demo
+
+                showStatus(`Found ${symbols.length} symbols`, 'success');
+                return symbols;
+            } catch (error) {
+                console.error('Failed to fetch symbols:', error);
+                showStatus('Failed to fetch symbols. Please check your connection.', 'error');
+                showNotification('API connection failed. Please try again.', 'error');
+                return [];
+            }
+        }
+
+        async function getKlineData(symbol, interval, limit = CONFIG.KLINE_LIMIT) {
+            try {
+                const url = `${CONFIG.API_BASE}/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error(`Failed to fetch ${symbol} ${interval}:`, error);
+                return [];
+            }
+        }
+
+        // Processing Functions
+        async function processSymbol(symbol, timeFrames, mode) {
+            const results = {};
+            let currentPrice = 0;
+
+            for (const tf of timeFrames) {
+                const data = await getKlineData(symbol, tf);
+                
+                if (data.length === 0) continue;
+
+                if (tf === '1h') {
+                    currentPrice = parseFloat(data[data.length - 1][4]);
+                }
+
+                results[tf] = vmpCalculator.calculateVPM(data);
+            }
+
+            // Calculate overall score
+            let totalScore = 0;
+            let totalWeight = 0;
+            let totalQuality = 0;
+            let qualityCount = 0;
+
+            for (const tf of timeFrames) {
+                if (results[tf]) {
+                    const weight = CONFIG.TIME_FRAME_WEIGHTS[tf] || 1;
+                    totalScore += results[tf].vmpScore * weight;
+                    totalWeight += weight;
+                    totalQuality += results[tf].quality;
+                    qualityCount++;
+                }
+            }
+
+            const overallScore = totalWeight > 0 ? totalScore / totalWeight : 50;
+            const avgQuality = qualityCount > 0 ? totalQuality / qualityCount : 0.5;
+            const primaryResult = results['1h'] || results[timeFrames[0]];
+
+            // Quality filter based on mode
+            if (mode === 'premium' && avgQuality < 0.8) return null;
+            if (mode === 'enhanced' && avgQuality < 0.6) return null;
+
+            return {
+                symbol,
+                currentPrice,
+                overallScore,
+                avgQuality,
+                results,
+                primaryResult: primaryResult || { usdFlow: 0, buyerRatio: 0.5 }
+            };
+        }
+
+        // UI Functions
+        function renderRow(result) {
+            const { symbol, currentPrice, overallScore, avgQuality, primaryResult } = result;
+            
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-800/50 transition-colors';
+            row.dataset.score = overallScore;
+            row.dataset.quality = avgQuality;
+
+            const qualityGrade = getQualityGrade(avgQuality);
+            const usdFlow = primaryResult.usdFlow || 0;
+            const buyerRatio = primaryResult.buyerRatio || 0.5;
+
+            row.innerHTML = `
+                <td class="px-4 py-3 text-sm font-semibold text-white">
+                    <a href="https://www.binance.com/tr/futures/${symbol}" target="_blank" 
+                       class="text-purple-400 hover:text-purple-300 hover:underline">
+                        ${symbol}
+                    </a>
+                </td>
+                <td class="px-4 py-3 text-sm text-right text-gray-300">
+                    ${currentPrice > 0 ? currentPrice.toFixed(currentPrice < 1 ? 4 : 2) : '--'}
+                </td>
+                <td class="px-4 py-3 text-sm text-center">
+                    <div class="enhanced-score" style="padding: 6px;">
+                        <div class="score-ring" style="width: 40px; height: 40px; margin: 0 auto 4px;">
+                            <div class="score-value" style="font-size: 12px;">${overallScore.toFixed(0)}</div>
+                        </div>
+                        <div class="text-xs ${qualityGrade.color}">${qualityGrade.grade}</div>
+                    </div>
+                </td>
+                <td class="px-4 py-3 text-sm text-center">
+                    <div class="usd-amount" style="font-size: 12px;">
+                        $${(usdFlow / 1000000).toFixed(1)}M
+                    </div>
+                </td>
+                <td class="px-4 py-3 text-sm text-center">
+                    <div class="text-sm font-semibold ${qualityGrade.color}">
+                        ${(avgQuality * 100).toFixed(0)}%
+                    </div>
+                </td>
+                <td class="px-4 py-3 text-sm text-center">
+                    ${getSignalHTML(overallScore, avgQuality)}
+                </td>
+                ${CONFIG.TIME_FRAMES.map(tf => {
+                    const tfResult = result.results[tf];
+                    const hideClass = tf === '2h' ? 'desktop-only' : '';
+                    return `<td class="px-4 py-3 text-sm text-center ${hideClass}">
+                        ${tfResult ? getTimeframeSignal(tfResult.vmpScore) : '--'}
+                    </td>`;
+                }).join('')}
+            `;
+
+            elements.resultsTable.appendChild(row);
+        }
+
+        function getQualityGrade(quality) {
+            if (quality >= 0.9) return { grade: 'ELITE', color: 'text-purple-400' };
+            if (quality >= 0.8) return { grade: 'PREMIUM', color: 'text-gold-400' };
+            if (quality >= 0.7) return { grade: 'HIGH', color: 'text-green-400' };
+            if (quality >= 0.6) return { grade: 'GOOD', color: 'text-blue-400' };
+            if (quality >= 0.5) return { grade: 'FAIR', color: 'text-yellow-400' };
+            return { grade: 'LOW', color: 'text-red-400' };
+        }
+
+        function getSignalHTML(score, quality) {
+            if (score > 75 && quality > 0.8) {
+                return '<span class="text-green-400 font-bold">STRONG BUY</span>';
+            } else if (score < 25 && quality > 0.8) {
+                return '<span class="text-red-400 font-bold">STRONG SELL</span>';
+            } else if (score > 65) {
+                return '<span class="text-green-300">BUY</span>';
+            } else if (score < 35) {
+                return '<span class="text-red-300">SELL</span>';
+            } else {
+                return '<span class="text-gray-400">NEUTRAL</span>';
+            }
+        }
+
+        function getTimeframeSignal(score) {
+            if (score > 70) return '<span class="text-green-400">BUY</span>';
+            if (score < 30) return '<span class="text-red-400">SELL</span>';
+            if (score > 60) return '<span class="text-green-300">Buy</span>';
+            if (score < 40) return '<span class="text-red-300">Sell</span>';
+            return '<span class="text-gray-500">Neutral</span>';
+        }
+
+        function updateDashboard(results) {
+            if (results.length === 0) return;
+
+            const avgScore = results.reduce((sum, r) => sum + r.overallScore, 0) / results.length;
+            const avgQuality = results.reduce((sum, r) => sum + r.avgQuality, 0) / results.length;
+            const totalUSD = results.reduce((sum, r) => sum + (r.primaryResult.usdFlow || 0), 0);
+            const strongSignals = results.filter(r => r.overallScore > 70 && r.avgQuality > 0.7).length;
+
+            elements.vmpIndex.textContent = avgScore.toFixed(0);
+            elements.signalQuality.textContent = (avgQuality * 100).toFixed(0) + '%';
+            elements.usdFlow.textContent = '$' + (totalUSD / 1000000).toFixed(1) + 'M';
+            elements.activeSignals.textContent = strongSignals;
+            elements.qualityBar.style.width = (avgQuality * 100) + '%';
+
+            // Update market regime
+            if (avgScore > 65) {
+                elements.marketRegime.textContent = 'Bullish';
+                elements.marketRegime.className = 'text-xl font-bold text-green-400';
+            } else if (avgScore < 35) {
+                elements.marketRegime.textContent = 'Bearish';
+                elements.marketRegime.className = 'text-xl font-bold text-red-400';
+            } else {
+                elements.marketRegime.textContent = 'Neutral';
+                elements.marketRegime.className = 'text-xl font-bold text-yellow-400';
+            }
+        }
+
+        // Scanning Function
+        async function startScan() {
+            if (isScanning) return;
+
+            isScanning = true;
+            elements.loader.classList.remove('hidden');
+            elements.vmpScanBtn.disabled = true;
+            elements.vmpScanBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Scanning...';
+            elements.resultsTable.innerHTML = '';
+            scanResults = [];
+
+            const scanMode = elements.scanModeSelect.value;
+            
+            try {
+                const symbols = await getSymbols();
+                if (symbols.length === 0) {
+                    throw new Error('No symbols found');
+                }
+
+                showStatus(`Processing ${symbols.length} symbols...`, 'info');
+
+                for (let i = 0; i < symbols.length; i += CONFIG.CONCURRENCY_LIMIT) {
+                    const batch = symbols.slice(i, i + CONFIG.CONCURRENCY_LIMIT);
+                    
+                    showStatus(`Processing batch ${Math.floor(i / CONFIG.CONCURRENCY_LIMIT) + 1}...`, 'info');
+
+                    const promises = batch.map(symbol => processSymbol(symbol, CONFIG.TIME_FRAMES, scanMode));
+                    const results = await Promise.all(promises);
+                    
+                    results.forEach(result => {
+                        if (result) {
+                            scanResults.push(result);
+                            renderRow(result);
+                        }
+                    });
+
+                    // Update progress
+                    const progress = Math.min(100, ((i + CONFIG.CONCURRENCY_LIMIT) / symbols.length) * 100);
+                    showStatus(`Progress: ${progress.toFixed(0)}%`, 'info');
+                }
+
+                // Sort results
+                const rows = Array.from(elements.resultsTable.querySelectorAll('tr'));
+                rows.sort((a, b) => {
+                    const scoreA = parseFloat(a.dataset.score) || 0;
+                    const scoreB = parseFloat(b.dataset.score) || 0;
+                    const qualityA = parseFloat(a.dataset.quality) || 0;
+                    const qualityB = parseFloat(b.dataset.quality) || 0;
+                    
+                    const combinedA = (scoreA * 0.7) + (qualityA * 100 * 0.3);
+                    const combinedB = (scoreB * 0.7) + (qualityB * 100 * 0.3);
+                    
+                    return combinedB - combinedA;
+                });
+
+                rows.forEach(row => elements.resultsTable.appendChild(row));
+                
+                updateDashboard(scanResults);
+                
+                showStatus(`Scan completed! Found ${scanResults.length} results.`, 'success');
+                showNotification(`VPM scan completed! Analyzed ${symbols.length} symbols.`, 'success');
+
+            } catch (error) {
+                console.error('Scan failed:', error);
+                showStatus('Scan failed: ' + error.message, 'error');
+                showNotification('Scan failed. Please try again.', 'error');
+            } finally {
+                isScanning = false;
+                elements.loader.classList.add('hidden');
+                elements.vmpScanBtn.disabled = false;
+                elements.vmpScanBtn.innerHTML = '<i class="fas fa-play mr-1"></i> Start Scan';
+            }
+        }
+
+        // Historical Analysis
+        async function analyzeHistorical(symbol, date, time, mode) {
+            elements.historicalResult.innerHTML = '<p class="text-blue-400"><i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...</p>';
+            
+            const timestamp = new Date(`${date}T${time}:00Z`).getTime();
+            if (isNaN(timestamp)) {
+                elements.historicalResult.innerHTML = '<p class="text-red-500">Invalid date/time format</p>';
+                return;
+            }
+
+            try {
+                const results = {};
+                for (const tf of CONFIG.TIME_FRAMES) {
+                    const data = await getKlineData(symbol, tf);
+                    if (data.length > 0) {
+                        results[tf] = vmpCalculator.calculateVPM(data);
+                    }
+                }
+
+                let html = `<div class="glass p-4">
+                    <h3 class="text-lg font-bold text-white mb-4">${symbol} - Historical VPM Analysis</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">`;
+
+                for (const tf of CONFIG.TIME_FRAMES) {
+                    const result = results[tf];
+                    if (result) {
+                        html += `
+                            <div class="text-center p-3 bg-gray-800 rounded">
+                                <p class="text-xs text-gray-400 uppercase">${tf}</p>
+                                <p class="text-lg font-bold ${getScoreColor(result.vmpScore)}">${result.vmpScore.toFixed(0)}</p>
+                                <p class="text-xs text-gray-500">Quality: ${(result.quality * 100).toFixed(0)}%</p>
+                            </div>
+                        `;
+                    }
+                }
+
+                html += '</div></div>';
+                elements.historicalResult.innerHTML = html;
+
+            } catch (error) {
+                console.error('Historical analysis failed:', error);
+                elements.historicalResult.innerHTML = '<p class="text-red-500">Analysis failed. Please try again.</p>';
+            }
+        }
+
+        function getScoreColor(score) {
+            if (score > 70) return 'text-green-400';
+            if (score < 30) return 'text-red-400';
+            if (score > 60) return 'text-green-300';
+            if (score < 40) return 'text-red-300';
+            return 'text-gray-300';
+        }
+
+        // Utility Functions
+        function showStatus(message, type = 'info') {
+            const colors = {
+                'info': 'text-blue-400',
+                'success': 'text-green-400',
+                'error': 'text-red-400',
+                'warning': 'text-yellow-400'
+            };
+
+            const icons = {
+                'info': 'fa-info-circle',
+                'success': 'fa-check-circle',
+                'error': 'fa-exclamation-circle',
+                'warning': 'fa-exclamation-triangle'
+            };
+
+            elements.status.innerHTML = `
+                <div class="${colors[type]} flex items-center justify-center">
+                    <i class="fas ${icons[type]} mr-2"></i>${message}
+                </div>
+            `;
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `glass p-4 rounded-lg max-w-md border-l-4 ${getBorderColor(type)}`;
+            
+            notification.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas ${getNotificationIcon(type)} mr-3 ${getNotificationColor(type)}"></i>
+                        <span class="text-white text-sm">${message}</span>
+                    </div>
+                    <button class="ml-4 text-gray-400 hover:text-white" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('notificationContainer').appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        function getNotificationIcon(type) {
+            const icons = {
+                'success': 'fa-check-circle',
+                'error': 'fa-exclamation-circle',
+                'info': 'fa-info-circle',
+                'warning': 'fa-exclamation-triangle'
+            };
+            return icons[type] || 'fa-info-circle';
+        }
+
+        function getNotificationColor(type) {
+            const colors = {
+                'success': 'text-green-400',
+                'error': 'text-red-400',
+                'info': 'text-blue-400',
+                'warning': 'text-yellow-400'
+            };
+            return colors[type] || 'text-blue-400';
+        }
+
+        function getBorderColor(type) {
+            const borders = {
+                'success': 'border-green-400',
+                'error': 'border-red-400',
+                'info': 'border-blue-400',
+                'warning': 'border-yellow-400'
+            };
+            return borders[type] || 'border-blue-400';
+        }
+
+        // Event Listeners
+        elements.vmpScanBtn.addEventListener('click', startScan);
+
+        elements.historicalForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const symbol = formData.get('symbol')?.toUpperCase();
+            const date = formData.get('date');
+            const time = formData.get('time');
+            const mode = elements.vmpModeSelect.value;
+
+            if (!symbol || !date || !time) {
+                showNotification('Please fill all fields', 'warning');
+                return;
+            }
+
+            analyzeHistorical(symbol, date, time, mode);
+        });
+
+        // Initialize
+        function initialize() {
+            console.log('🚀 VPM Scanner initializing...');
+            
+            // Set default date/time
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10);
+            const timeStr = now.toTimeString().slice(0, 5);
+            
+            if (elements.historicalForm) {
+                const dateInput = elements.historicalForm.querySelector('#dateInput');
+                const timeInput = elements.historicalForm.querySelector('#timeInput');
+                if (dateInput) dateInput.value = dateStr;
+                if (timeInput) timeInput.value = timeStr;
+            }
+            
+            showStatus('VPM Scanner ready', 'success');
+            showNotification('🚀 VPM Scanner initialized successfully!', 'success');
+            
+            console.log('✅ VPM Scanner ready');
+        }
+
+        // Start when DOM is loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initialize);
+        } else {
+            initialize();
+        }
+    </script>
+</body>
+</html>
