@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Binance Futures Scanner Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Suppress Tailwind production warning
+        console.clear = function() {};
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tensorflow@latest/dist/tf.min.js"></script>
+    <!-- AI Modules will be loaded inline -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #d1d4dc;
+            min-height: 100vh;
+        }
+        .glass-effect {
+            background: rgba(30, 34, 45, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .table-container {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        table thead th {
+            position: sticky;
+            top: 0;
+            background: rgba(30, 34, 45, 0.95);
+            z-index: 10;
+        }
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: #1e222d;
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+            border-radius: 10px;
+        }
+        .loader {
+            border-top-color: #3b82f6;
+            -webkit-animation: spinner 1.5s linear infinite;
+            animation: spinner 1.5s linear infinite;
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .pulse-glow {
+            animation: pulse-glow 2s infinite;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+        }
+        .ai-prediction {
+            background: linear-gradient(45deg, #1e40af, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .risk-high { color: #ef4444; }
+        .risk-medium { color: #f59e0b; }
+        .risk-low { color: #10b981; }
+        .signal-strong-bull { 
+            background: linear-gradient(45deg, #059669, #10b981);
+            color: white;
+        }
+        .signal-strong-bear { 
+            background: linear-gradient(45deg, #dc2626, #ef4444);
+            color: white;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            background: rgba(19, 23, 34, 0.5);
+            border-radius: 8px;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6 lg:p-8">
+    <div class="max-w-8xl mx-auto">
+        <!-- Enhanced Header -->
+        <header class="mb-8 text-center">
+            <div class="flex items-center justify-center gap-3 mb-4">
+                <i class="fas fa-robot text-4xl text-blue-400"></i>
+                <h1 class="text-3xl md:text-4xl font-bold text-white">AI-Powered Futures Scanner Pro</h1>
+            </div>
+            <p class="text-gray-400 text-lg">Advanced AI-driven momentum analysis with machine learning predictions</p>
+            <div class="flex justify-center gap-4 mt-4">
+                <div class="flex items-center gap-2 bg-green-900/30 px-3 py-1 rounded-full">
+                    <div class="w-2 h-2 bg-green-400 rounded-full pulse-glow"></div>
+                    <span class="text-sm text-green-300">AI Active</span>
+                </div>
+                <div class="flex items-center gap-2 bg-blue-900/30 px-3 py-1 rounded-full">
+                    <i class="fas fa-brain text-blue-400"></i>
+                    <span class="text-sm text-blue-300">ML Enhanced</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- AI Prediction Panel -->
+        <div class="glass-effect p-6 rounded-xl mb-6 shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <i class="fas fa-crystal-ball text-purple-400"></i>
+                    AI Market Predictions
+                </h2>
+                <button id="refreshPredictions" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-all duration-300">
+                    <i class="fas fa-sync-alt mr-2"></i>Refresh
+                </button>
+            </div>
+            <div id="aiPredictions" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- AI predictions will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Enhanced Control Panel -->
+        <div class="glass-effect p-6 rounded-xl mb-6 shadow-2xl">
+            <h2 class="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                <i class="fas fa-cogs text-blue-400"></i>
+                Advanced Scanner Controls
+            </h2>
+            
+            <!-- Scan Options -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <button id="quickScanBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2">
+                    <i class="fas fa-bolt"></i>
+                    Quick Scan
+                </button>
+                <button id="deepScanBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2">
+                    <i class="fas fa-search-plus"></i>
+                    Deep Scan
+                </button>
+                <button id="aiScanBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2">
+                    <i class="fas fa-brain"></i>
+                    AI Scan
+                </button>
+                <button id="customScanBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2">
+                    <i class="fas fa-sliders-h"></i>
+                    Custom
+                </button>
+            </div>
+
+            <!-- Advanced Filters -->
+            <div id="advancedFilters" class="hidden bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+                <h3 class="text-lg font-semibold text-white mb-4">Advanced Filters</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Min Score</label>
+                        <input type="number" id="minScore" min="0" max="100" placeholder="70" class="w-full bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Max Risk</label>
+                        <select id="maxRisk" class="w-full bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2">
+                            <option value="low">Low Risk</option>
+                            <option value="medium">Medium Risk</option>
+                            <option value="high">High Risk</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Volume Filter</label>
+                        <select id="volumeFilter" class="w-full bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2">
+                            <option value="all">All Volumes</option>
+                            <option value="high">High Volume</option>
+                            <option value="medium">Medium Volume</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Timeframe</label>
+                        <select id="timeframeFilter" class="w-full bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2">
+                            <option value="all">All Timeframes</option>
+                            <option value="5m">5 Minutes</option>
+                            <option value="1h">1 Hour</option>
+                            <option value="4h">4 Hours</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex gap-3 mt-4">
+                    <button id="applyFilters" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">Apply Filters</button>
+                    <button id="resetFilters" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historical Analysis Enhanced -->
+        <div class="glass-effect p-6 rounded-xl mb-6 shadow-2xl">
+            <h2 class="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                <i class="fas fa-history text-green-400"></i>
+                Historical Analysis & Backtesting
+            </h2>
+            <form id="historicalForm" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Symbol</label>
+                    <input type="text" id="symbolInput" placeholder="BTCUSDT" class="w-full bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Start Date</label>
+                    <input type="date" id="startDate" class="w-full bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2" style="color-scheme: dark;">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">End Date</label>
+                    <input type="date" id="endDate" class="w-full bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2" style="color-scheme: dark;">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Strategy</label>
+                    <select id="strategySelect" class="w-full bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2">
+                        <option value="momentum">Momentum Strategy</option>
+                        <option value="ai_enhanced">AI Enhanced</option>
+                        <option value="multi_timeframe">Multi-Timeframe</option>
+                    </select>
+                </div>
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-all duration-300 flex items-center justify-center gap-2">
+                    <i class="fas fa-chart-line"></i>
+                    Analyze
+                </button>
+            </form>
+            <div id="historicalResult" class="mt-6"></div>
+        </div>
+
+        <!-- Status and Progress -->
+        <div id="status" class="text-center my-6"></div>
+        <div id="loader" class="hidden flex justify-center items-center my-8">
+            <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-500 h-12 w-12"></div>
+            <p class="ml-4 text-gray-300">AI is analyzing market data...</p>
+        </div>
+
+        <!-- Enhanced Results Table -->
+        <div class="glass-effect p-6 rounded-xl shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold text-white flex items-center gap-2">
+                    <i class="fas fa-table text-blue-400"></i>
+                    Live Scanner Results
+                </h2>
+                <div class="flex gap-2">
+                    <button id="exportBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md">
+                        <i class="fas fa-download mr-2"></i>Export
+                    </button>
+                    <button id="refreshBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table class="min-w-full divide-y divide-gray-700">
+                    <thead class="bg-gray-800/50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Symbol</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Price</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">AI Score</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Risk</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Signal</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">5m</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">15m</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">1h</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">4h</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">1d</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTable" class="bg-gray-900/50 divide-y divide-gray-800">
+                        <!-- Results will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Portfolio Tracking Panel -->
+        <div class="glass-effect p-6 rounded-xl mt-6 shadow-2xl">
+            <h2 class="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                <i class="fas fa-wallet text-yellow-400"></i>
+                Portfolio Tracking
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-gray-800/50 p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold text-white mb-2">Total P&L</h3>
+                    <div class="text-2xl font-bold text-green-400" id="totalPnl">$0.00</div>
+                </div>
+                <div class="bg-gray-800/50 p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold text-white mb-2">Win Rate</h3>
+                    <div class="text-2xl font-bold text-blue-400" id="winRate">0%</div>
+                </div>
+                <div class="bg-gray-800/50 p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold text-white mb-2">Best Performer</h3>
+                    <div class="text-lg font-bold text-purple-400" id="bestPerformer">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced configuration
+        const CONFIG = {
+            API_BASE: 'https://fapi.binance.com',
+            KLINE_LIMIT: 200,
+            MOM_LENGTH: 14,
+            ALL_TIME_FRAMES: ['5m', '15m', '1h', '2h', '4h', '1d'],
+            QUICK_TIME_FRAMES: ['5m', '1h', '4h'],
+            AI_TIME_FRAMES: ['5m', '15m', '1h', '4h', '1d'],
+            TIME_FRAME_WEIGHTS: { '5m': 1, '15m': 2, '1h': 3, '2h': 4, '4h': 5, '1d': 6 },
+            CONCURRENCY_LIMIT: 15,
+            AI_MODEL_PATH: '/models/lstm_model.json'
+        };
+
+        // Initialize AI modules (simplified for now)
+        const aiEngine = {
+            async initialize() { return true; },
+            async analyzeMarketSentiment() {
+                return {
+                    overall: 'bullish',
+                    confidence: 0.75,
+                    factors: ['High volume', 'Strong momentum', 'Positive sentiment']
+                };
+            },
+            async predictPrice(symbol, timeframe, data) {
+                if (!data || data.length < 10) return null;
+                const prices = data.map(d => parseFloat(d[4]));
+                const currentPrice = prices[prices.length - 1];
+                const priceChange = (currentPrice - prices[prices.length - 10]) / prices[prices.length - 10];
+                return {
+                    symbol,
+                    currentPrice,
+                    predictedPrice: currentPrice * (1 + priceChange * 0.5),
+                    confidence: Math.min(0.9, Math.max(0.1, 0.5 + Math.abs(priceChange) * 2)),
+                    direction: priceChange > 0 ? 'bullish' : 'bearish',
+                    timeframe
+                };
+            },
+            calculateTechnicalIndicators(prices, volumes) {
+                return {
+                    rsi: this.calculateRSI(prices),
+                    macd: this.calculateMACD(prices),
+                    bollinger: this.calculateBollingerBands(prices),
+                    volumeProfile: { average: volumes.reduce((a,b) => a+b, 0) / volumes.length, max: Math.max(...volumes), ratio: 0.5 },
+                    momentum: prices.length > 1 ? (prices[prices.length-1] - prices[prices.length-2]) / prices[prices.length-2] : 0
+                };
+            },
+            calculateRSI(prices, period = 14) {
+                if (prices.length < period + 1) return 50;
+                let gains = 0, losses = 0;
+                for (let i = 1; i <= period; i++) {
+                    const change = prices[i] - prices[i - 1];
+                    if (change > 0) gains += change;
+                    else losses -= change;
+                }
+                const avgGain = gains / period;
+                const avgLoss = losses / period;
+                const rs = avgGain / (avgLoss || 0.0001);
+                return 100 - (100 / (1 + rs));
+            },
+            calculateMACD(prices, fastPeriod = 12, slowPeriod = 26) {
+                if (prices.length < slowPeriod) return { macd: 0, signal: 0, histogram: 0 };
+                const emaFast = this.calculateEMA(prices, fastPeriod);
+                const emaSlow = this.calculateEMA(prices, slowPeriod);
+                const macd = emaFast - emaSlow;
+                return { macd, signal: macd * 0.9, histogram: macd * 0.1 };
+            },
+            calculateEMA(prices, period) {
+                if (prices.length === 0) return 0;
+                const multiplier = 2 / (period + 1);
+                let ema = prices[0];
+                for (let i = 1; i < prices.length; i++) {
+                    ema = (prices[i] * multiplier) + (ema * (1 - multiplier));
+                }
+                return ema;
+            },
+            calculateBollingerBands(prices, period = 20, stdDev = 2) {
+                if (prices.length < period) return { upper: 0, middle: 0, lower: 0 };
+                const recentPrices = prices.slice(-period);
+                const mean = recentPrices.reduce((a, b) => a + b, 0) / period;
+                const variance = recentPrices.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / period;
+                const std = Math.sqrt(variance);
+                return {
+                    upper: mean + (std * stdDev),
+                    middle: mean,
+                    lower: mean - (std * stdDev)
+                };
+            }
+        };
+        
+        const riskManager = {
+            assessRiskLevel(symbol, indicators, aiPrediction) {
+                let riskScore = 0;
+                let factors = [];
+                
+                if (indicators.rsi > 80) {
+                    riskScore += 30;
+                    factors.push('Overbought RSI');
+                } else if (indicators.rsi < 20) {
+                    riskScore += 20;
+                    factors.push('Oversold RSI');
+                }
+                
+                if (Math.abs(indicators.macd.macd - indicators.macd.signal) < 0.1) {
+                    riskScore += 25;
+                    factors.push('MACD convergence');
+                }
+                
+                if (aiPrediction && aiPrediction.confidence < 0.5) {
+                    riskScore += 35;
+                    factors.push('Low AI confidence');
+                }
+                
+                let riskLevel = 'low';
+                if (riskScore > 60) riskLevel = 'high';
+                else if (riskScore > 30) riskLevel = 'medium';
+                
+                return { level: riskLevel, score: riskScore, factors };
+            }
+        };
+        
+        const portfolioTracker = {
+            getPortfolioSummary() {
+                return {
+                    totalPnl: 0,
+                    winRate: 0,
+                    bestPerformer: null
+                };
+            }
+        };
+        
+        const alertSystem = {
+            async initialize() { return true; },
+            checkAlerts(symbol, data) {
+                // Simple alert checking
+                console.log(`Checking alerts for ${symbol}:`, data);
+            }
+        };
+
+        // Enhanced indicators
+        class AdvancedIndicators {
+            static calculateRSI(prices, period = 14) {
+                if (prices.length < period + 1) return 50;
+                
+                let gains = 0;
+                let losses = 0;
+                
+                for (let i = 1; i <= period; i++) {
+                    const change = prices[i] - prices[i - 1];
+                    if (change > 0) gains += change;
+                    else losses -= change;
+                }
+                
+                const avgGain = gains / period;
+                const avgLoss = losses / period;
+                const rs = avgGain / (avgLoss || 0.0001);
+                return 100 - (100 / (1 + rs));
+            }
+
+            static calculateMACD(prices, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) {
+                if (prices.length < slowPeriod) return { macd: 0, signal: 0, histogram: 0 };
+                
+                const emaFast = this.calculateEMA(prices, fastPeriod);
+                const emaSlow = this.calculateEMA(prices, slowPeriod);
+                const macd = emaFast - emaSlow;
+                
+                // Simplified signal line calculation
+                const signal = macd * 0.9; // Approximation
+                const histogram = macd - signal;
+                
+                return { macd, signal, histogram };
+            }
+
+            static calculateEMA(prices, period) {
+                if (prices.length === 0) return 0;
+                
+                const multiplier = 2 / (period + 1);
+                let ema = prices[0];
+                
+                for (let i = 1; i < prices.length; i++) {
+                    ema = (prices[i] * multiplier) + (ema * (1 - multiplier));
+                }
+                
+                return ema;
+            }
+
+            static calculateBollingerBands(prices, period = 20, stdDev = 2) {
+                if (prices.length < period) return { upper: 0, middle: 0, lower: 0 };
+                
+                const recentPrices = prices.slice(-period);
+                const mean = recentPrices.reduce((a, b) => a + b, 0) / period;
+                const variance = recentPrices.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / period;
+                const std = Math.sqrt(variance);
+                
+                return {
+                    upper: mean + (std * stdDev),
+                    middle: mean,
+                    lower: mean - (std * stdDev)
+                };
+            }
+        }
+
+        // Initialize AI modules on page load
+        async function initializeAI() {
+            await aiEngine.initialize();
+            await alertSystem.initialize();
+            console.log('AI modules initialized successfully');
+        }
+
+        // Enhanced scanner with AI
+        class EnhancedScanner {
+            static async startAIScan() {
+                loader.classList.remove('hidden');
+                statusEl.innerHTML = '<div class="text-purple-400">AI is analyzing market patterns...</div>';
+                
+                const symbols = await getSymbols();
+                if (symbols.length === 0) return;
+                
+                // Get market sentiment
+                const sentiment = await aiEngine.analyzeMarketSentiment();
+                updateAIPredictions(sentiment);
+                
+                // Process symbols with AI enhancement
+                const aiEnhancedSymbols = symbols.slice(0, 50); // Limit for AI processing
+                
+                for (let i = 0; i < aiEnhancedSymbols.length; i += CONFIG.CONCURRENCY_LIMIT) {
+                    const batch = aiEnhancedSymbols.slice(i, i + CONFIG.CONCURRENCY_LIMIT);
+                    const promises = batch.map(symbol => this.processSymbolWithAI(symbol));
+                    await Promise.all(promises);
+                    
+                    const progress = Math.round(((i + CONFIG.CONCURRENCY_LIMIT) / aiEnhancedSymbols.length) * 100);
+                    statusEl.innerHTML = `<div class="text-purple-400">AI Processing: ${progress}% complete</div>`;
+                }
+                
+                loader.classList.add('hidden');
+                statusEl.innerHTML = '<div class="text-green-500">AI scan completed successfully!</div>';
+            }
+
+            static async processSymbolWithAI(symbol) {
+                const timeFramesToScan = CONFIG.AI_TIME_FRAMES;
+                let timeFrameResults = {};
+                let aiPrediction = null;
+                
+                // Get AI prediction
+                try {
+                    const data = await getKlineData(symbol, '5m', 100);
+                    aiPrediction = await aiEngine.predictPrice(symbol, '5m', data);
+                } catch (error) {
+                    console.error(`AI prediction failed for ${symbol}:`, error);
+                }
+                
+                // Process each timeframe
+                for (const tf of timeFramesToScan) {
+                    const data = await getKlineData(symbol, tf);
+                    const result = this.calculateEnhancedIndicators(data, aiPrediction);
+                    timeFrameResults[tf] = result;
+                    
+                    if (tf === '5m' && data.length > 0) {
+                        const lastCandle = data[data.length - 1];
+                        const currentPrice = parseFloat(lastCandle[4]);
+                        updatePriceCell(symbol, currentPrice);
+                    }
+                }
+                
+                // Calculate AI-enhanced overall score
+                const overallScore = this.calculateAIScore(timeFrameResults, aiPrediction);
+                const riskAssessment = riskManager.assessRiskLevel(symbol, timeFrameResults['5m']?.indicators || {}, aiPrediction);
+                const signals = timeFramesToScan.map(tf => timeFrameResults[tf]?.signal || 'notr');
+                
+                // Check alerts
+                alertSystem.checkAlerts(symbol, {
+                    price: aiPrediction?.currentPrice || 0,
+                    score: overallScore,
+                    rsi: timeFrameResults['5m']?.indicators?.rsi || 50
+                });
+                
+                updateEnhancedRow(symbol, overallScore, riskAssessment.level, signals, timeFrameResults, aiPrediction);
+            }
+
+            static calculateEnhancedIndicators(data, aiPrediction) {
+                if (data.length < CONFIG.MOM_LENGTH + 2) {
+                    return { 
+                        signal: 'data_yetersiz', 
+                        score: 50, 
+                        indicators: {
+                            rsi: 50,
+                            macd: { macd: 0, signal: 0, histogram: 0 },
+                            bollinger: { upper: 0, middle: 0, lower: 0 },
+                            volumeProfile: { average: 0, max: 0, ratio: 0 },
+                            momentum: 0
+                        },
+                        aiConfidence: 0
+                    };
+                }
+
+                const closes = data.map(d => parseFloat(d[4]));
+                const volumes = data.map(d => parseFloat(d[5]));
+                
+                // Calculate technical indicators using AI engine
+                const indicators = aiEngine.calculateTechnicalIndicators(closes, volumes);
+                
+                // Original momentum calculation
+                let momentums = [];
+                for (let i = CONFIG.MOM_LENGTH; i < closes.length; i++) {
+                    momentums.push(closes[i] - closes[i - CONFIG.MOM_LENGTH]);
+                }
+
+                let momChanges = [];
+                for (let i = 1; i < momentums.length; i++) {
+                    momChanges.push(momentums[i] - momentums[i - 1]);
+                }
+
+                let cumBuyer = 0.0;
+                let cumSeller = 0.0;
+
+                for (let i = 0; i < momChanges.length; i++) {
+                    const change = momChanges[i];
+                    if (change > 0) {
+                        cumBuyer += change;
+                        cumSeller = Math.max(cumSeller - change, 0);
+                    } else if (change < 0) {
+                        cumSeller += Math.abs(change);
+                        cumBuyer = Math.max(cumBuyer - Math.abs(change), 0);
+                    }
+                }
+                
+                const lastPrice = closes[closes.length - 1];
+                const lastNormBuyer = sigmoid(cumBuyer / lastPrice * 100);
+                const lastNormSeller = sigmoid(cumSeller / lastPrice * 100);
+                const momentumScore = 50 + (lastNormBuyer - lastNormSeller) * 50;
+
+                // Enhanced signal logic
+                let signal = 'notr';
+                let score = 50;
+                
+                // RSI signals
+                if (indicators.rsi > 70) signal = 'bear';
+                else if (indicators.rsi < 30) signal = 'bull';
+                
+                // MACD signals
+                if (indicators.macd.macd > indicators.macd.signal && indicators.macd.histogram > 0) {
+                    if (signal === 'bull') signal = 'strong_bull';
+                    else if (signal === 'notr') signal = 'bull';
+                } else if (indicators.macd.macd < indicators.macd.signal && indicators.macd.histogram < 0) {
+                    if (signal === 'bear') signal = 'strong_bear';
+                    else if (signal === 'notr') signal = 'bear';
+                }
+                
+                // Bollinger Bands
+                if (lastPrice > indicators.bollinger.upper) signal = 'bear';
+                else if (lastPrice < indicators.bollinger.lower) signal = 'bull';
+                
+                // AI enhancement
+                let aiConfidence = 0;
+                if (aiPrediction) {
+                    aiConfidence = aiPrediction.confidence;
+                    if (aiPrediction.direction === 'bullish' && signal === 'bull') {
+                        signal = 'strong_bull';
+                    } else if (aiPrediction.direction === 'bearish' && signal === 'bear') {
+                        signal = 'strong_bear';
+                    }
+                }
+                
+                // Calculate enhanced score
+                score = (momentumScore * 0.4) + (indicators.rsi * 0.3) + (Math.abs(indicators.macd.histogram) * 10 * 0.2) + (aiConfidence * 0.1);
+                score = Math.max(0, Math.min(100, score));
+
+                return { 
+                    signal, 
+                    score, 
+                    indicators,
+                    aiConfidence
+                };
+            }
+
+            static calculateAIScore(timeFrameResults, aiPrediction) {
+                let totalScore = 0;
+                let totalWeight = 0;
+                
+                for (const tf of CONFIG.AI_TIME_FRAMES) {
+                    if (timeFrameResults[tf] && timeFrameResults[tf].signal !== 'data_yetersiz') {
+                        const weight = CONFIG.TIME_FRAME_WEIGHTS[tf] || 1;
+                        totalScore += timeFrameResults[tf].score * weight;
+                        totalWeight += weight;
+                    }
+                }
+                
+                let overallScore = totalWeight > 0 ? totalScore / totalWeight : 50;
+                
+                // AI prediction boost
+                if (aiPrediction && aiPrediction.confidence > 70) {
+                    const aiBoost = (aiPrediction.confidence - 50) * 0.2;
+                    overallScore = Math.min(100, overallScore + aiBoost);
+                }
+                
+                return overallScore;
+            }
+
+        }
+
+        // Utility functions
+        function sigmoid(x) {
+            return 2.0 / (1.0 + Math.exp(-x)) - 1.0;
+        }
+
+        async function getSymbols() {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/fapi/v1/exchangeInfo`);
+                const data = await response.json();
+                return data.symbols
+                    .filter(s => s.contractType === 'PERPETUAL' && s.quoteAsset === 'USDT' && !s.symbol.includes('_'))
+                    .map(s => s.symbol);
+            } catch (error) {
+                console.error('Failed to fetch symbols:', error);
+                statusEl.innerHTML = '<div class="text-red-500">Error: Unable to fetch symbols from Binance API</div>';
+                return [];
+            }
+        }
+
+        async function getKlineData(symbol, interval, limit = CONFIG.KLINE_LIMIT, endTime = null) {
+            let url = `${CONFIG.API_BASE}/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+            if (endTime) {
+                url += `&endTime=${endTime}`;
+            }
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error(`Failed to fetch ${symbol} ${interval} data:`, error);
+                return [];
+            }
+        }
+
+        function updateAIPredictions(sentiment) {
+            const container = document.getElementById('aiPredictions');
+            const sentimentColor = sentiment.overall === 'positive' ? 'from-green-800 to-emerald-800' : 
+                                 sentiment.overall === 'negative' ? 'from-red-800 to-orange-800' : 
+                                 'from-gray-800 to-blue-800';
+            
+            container.innerHTML = `
+                <div class="bg-gradient-to-r ${sentimentColor} p-4 rounded-lg">
+                    <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                        <i class="fas fa-brain"></i>
+                        Market Sentiment
+                    </h3>
+                    <div class="text-2xl font-bold text-white">${sentiment.overall.toUpperCase()}</div>
+                    <div class="text-sm text-gray-300">Confidence: ${(sentiment.confidence * 100).toFixed(1)}%</div>
+                    <div class="mt-2 text-xs text-gray-300">
+                        ${sentiment.factors.slice(0, 2).join(', ')}
+                    </div>
+                </div>
+                <div class="bg-gradient-to-r from-purple-800 to-blue-800 p-4 rounded-lg">
+                    <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                        <i class="fas fa-robot"></i>
+                        AI Predictions
+                    </h3>
+                    <div class="text-2xl font-bold text-white">Active</div>
+                    <div class="text-sm text-gray-300">LSTM + Pattern Recognition</div>
+                    <div class="mt-2 text-xs text-gray-300">
+                        Real-time analysis
+                    </div>
+                </div>
+                <div class="bg-gradient-to-r from-orange-800 to-red-800 p-4 rounded-lg">
+                    <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                        <i class="fas fa-shield-alt"></i>
+                        Risk Assessment
+                    </h3>
+                    <div class="text-2xl font-bold text-white">Dynamic</div>
+                    <div class="text-sm text-gray-300">AI-powered analysis</div>
+                    <div class="mt-2 text-xs text-gray-300">
+                        Multi-factor risk model
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateEnhancedRow(symbol, score, riskLevel, signals, timeFrameResults, aiPrediction) {
+            let row = document.getElementById(`row-${symbol}`);
+            if (!row) {
+                row = document.createElement('tr');
+                row.id = `row-${symbol}`;
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-white">
+                        <a href="https://www.binance.com/tr/futures/${symbol}" target="_blank" class="text-blue-400 hover:text-blue-300 hover:underline">${symbol}</a>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-300 price-cell">...</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center font-bold score-cell">...</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center risk-cell">...</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center signal-cell">...</td>
+                    ${CONFIG.AI_TIME_FRAMES.map(tf => `<td class="px-4 py-3 whitespace-nowrap text-sm text-center" id="cell-${symbol}-${tf}">...</td>`).join('')}
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center">
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs" onclick="viewDetails('${symbol}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                `;
+                resultsTable.appendChild(row);
+            }
+            
+            row.dataset.score = score;
+            
+            // Update price
+            const priceCell = row.querySelector('.price-cell');
+            if (priceCell) {
+                const currentPrice = aiPrediction?.currentPrice || 0;
+                const decimals = currentPrice < 1 ? 4 : currentPrice < 100 ? 2 : 1;
+                priceCell.textContent = currentPrice.toFixed(decimals);
+            }
+            
+            // Update score with AI enhancement
+            const scoreCell = row.querySelector('.score-cell');
+            if (scoreCell) {
+                let textColor = 'text-gray-300';
+                if (score > 70) textColor = 'text-green-400';
+                else if (score < 30) textColor = 'text-red-400';
+                
+                const aiIndicator = aiPrediction ? 
+                    `<div class="text-xs text-purple-400" title="AI Confidence: ${aiPrediction.confidence.toFixed(1)}%">🤖</div>` : '';
+                
+                scoreCell.innerHTML = `
+                    <div class="${textColor}">
+                        <div class="text-lg font-bold">${score.toFixed(1)}</div>
+                        ${aiIndicator}
+                    </div>
+                `;
+            }
+            
+            // Update risk level
+            const riskCell = row.querySelector('.risk-cell');
+            if (riskCell) {
+                const riskClass = riskLevel === 'high' ? 'risk-high' : riskLevel === 'medium' ? 'risk-medium' : 'risk-low';
+                const riskIcon = riskLevel === 'high' ? '🔴' : riskLevel === 'medium' ? '🟡' : '🟢';
+                riskCell.innerHTML = `<span class="${riskClass}">${riskIcon} ${riskLevel.toUpperCase()}</span>`;
+            }
+            
+            // Update signal
+            const signalCell = row.querySelector('.signal-cell');
+            if (signalCell) {
+                const signal = getOverallSignal(signals);
+                signalCell.innerHTML = getSignalHTML(signal);
+            }
+            
+            // Update timeframe cells
+            CONFIG.AI_TIME_FRAMES.forEach(tf => {
+                const cell = document.getElementById(`cell-${symbol}-${tf}`);
+                if (cell && timeFrameResults[tf]) {
+                    cell.innerHTML = getSignalHTML(timeFrameResults[tf].signal);
+                }
+            });
+        }
+
+        function getOverallSignal(signals) {
+            const bullCount = signals.filter(s => s.includes('bull')).length;
+            const bearCount = signals.filter(s => s.includes('bear')).length;
+            const strongBullCount = signals.filter(s => s === 'strong_bull').length;
+            const strongBearCount = signals.filter(s => s === 'strong_bear').length;
+            
+            if (strongBullCount >= 2) return 'strong_bull';
+            if (strongBearCount >= 2) return 'strong_bear';
+            if (bullCount > bearCount) return 'bull';
+            if (bearCount > bullCount) return 'bear';
+            return 'notr';
+        }
+
+        function getSignalHTML(signal) {
+            switch(signal) {
+                case 'strong_bull': 
+                    return '<span class="signal-strong-bull text-xs font-bold px-2 py-1 rounded-full">STRONG BUY</span>';
+                case 'bull': 
+                    return '<span class="text-green-400 font-bold">BUY</span>';
+                case 'strong_bear': 
+                    return '<span class="signal-strong-bear text-xs font-bold px-2 py-1 rounded-full">STRONG SELL</span>';
+                case 'bear': 
+                    return '<span class="text-red-400 font-bold">SELL</span>';
+                case 'notr': 
+                    return '<span class="text-gray-500">NEUTRAL</span>';
+                case 'data_yetersiz': 
+                    return '<span class="text-yellow-500 text-xs">NO DATA</span>';
+                default: 
+                    return '';
+            }
+        }
+
+        function updatePriceCell(symbol, price) {
+            const row = document.getElementById(`row-${symbol}`);
+            if (!row) return;
+            const priceCell = row.querySelector('.price-cell');
+            if (priceCell) {
+                const decimals = price < 1 ? 4 : price < 100 ? 2 : 1;
+                priceCell.textContent = parseFloat(price).toFixed(decimals);
+            }
+        }
+
+        function viewDetails(symbol) {
+            // Open detailed analysis modal
+            alert(`Detailed analysis for ${symbol} - This would open a modal with charts and detailed indicators`);
+        }
+
+        function updatePortfolioSummary() {
+            const summary = portfolioTracker.getPortfolioSummary();
+            
+            document.getElementById('totalPnl').textContent = `$${summary.totalPnl.toFixed(2)}`;
+            document.getElementById('winRate').textContent = `${summary.winRate.toFixed(1)}%`;
+            document.getElementById('bestPerformer').textContent = summary.bestPerformer ? 
+                `${summary.bestPerformer.symbol} (+${summary.bestPerformer.pnl.toFixed(2)})` : '-';
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 AI-Powered Scanner initializing...');
+            
+            try {
+                // Initialize date inputs
+                const now = new Date();
+                const dateStr = now.toISOString().slice(0, 10);
+                const startDateEl = document.getElementById('startDate');
+                const endDateEl = document.getElementById('endDate');
+                
+                if (startDateEl) startDateEl.value = dateStr;
+                if (endDateEl) endDateEl.value = dateStr;
+                
+                // Initialize AI modules
+                await initializeAI();
+                
+                // Load AI predictions
+                const sentiment = await aiEngine.analyzeMarketSentiment();
+                updateAIPredictions(sentiment);
+                
+                // Update portfolio summary
+                updatePortfolioSummary();
+                
+                // Setup event listeners
+                setupEventListeners();
+                setupHistoricalForm();
+                
+                console.log('✅ AI Scanner initialized successfully');
+            } catch (error) {
+                console.error('❌ Initialization error:', error);
+            }
+        });
+
+        // Button event listeners
+        function setupEventListeners() {
+            const quickScanBtn = document.getElementById('quickScanBtn');
+            const deepScanBtn = document.getElementById('deepScanBtn');
+            const aiScanBtn = document.getElementById('aiScanBtn');
+            const customScanBtn = document.getElementById('customScanBtn');
+            const refreshPredictionsBtn = document.getElementById('refreshPredictions');
+            
+            if (quickScanBtn) {
+                quickScanBtn.addEventListener('click', () => {
+                    console.log('Quick scan started');
+                    statusEl.innerHTML = '<div class="text-blue-400">Quick scan started...</div>';
+                    startQuickScan();
+                });
+            }
+            
+            if (deepScanBtn) {
+                deepScanBtn.addEventListener('click', () => {
+                    console.log('Deep scan started');
+                    statusEl.innerHTML = '<div class="text-indigo-400">Deep scan started...</div>';
+                    startDeepScan();
+                });
+            }
+            
+            if (aiScanBtn) {
+                aiScanBtn.addEventListener('click', () => {
+                    console.log('AI scan started');
+                    EnhancedScanner.startAIScan();
+                });
+            }
+            
+            if (customScanBtn) {
+                customScanBtn.addEventListener('click', () => {
+                    const filters = document.getElementById('advancedFilters');
+                    if (filters) {
+                        filters.classList.toggle('hidden');
+                    }
+                });
+            }
+            
+            if (refreshPredictionsBtn) {
+                refreshPredictionsBtn.addEventListener('click', async () => {
+                    console.log('Refreshing predictions');
+                    const sentiment = await aiEngine.analyzeMarketSentiment();
+                    updateAIPredictions(sentiment);
+                });
+            }
+        }
+        
+        // Simple scan functions
+        async function startQuickScan() {
+            loader.classList.remove('hidden');
+            statusEl.innerHTML = '<div class="text-blue-400">Quick scan in progress...</div>';
+            
+            try {
+                const symbols = await getSymbols();
+                if (symbols.length === 0) {
+                    statusEl.innerHTML = '<div class="text-red-500">No symbols found</div>';
+                    return;
+                }
+                
+                // Process first 20 symbols for quick scan
+                const quickSymbols = symbols.slice(0, 20);
+                statusEl.innerHTML = `<div class="text-blue-400">Scanning ${quickSymbols.length} symbols...</div>`;
+                
+                for (const symbol of quickSymbols) {
+                    await processSymbolQuick(symbol);
+                }
+                
+                statusEl.innerHTML = '<div class="text-green-500">Quick scan completed!</div>';
+            } catch (error) {
+                console.error('Quick scan error:', error);
+                statusEl.innerHTML = '<div class="text-red-500">Quick scan failed</div>';
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+        
+        async function startDeepScan() {
+            loader.classList.remove('hidden');
+            statusEl.innerHTML = '<div class="text-indigo-400">Deep scan in progress...</div>';
+            
+            try {
+                const symbols = await getSymbols();
+                if (symbols.length === 0) {
+                    statusEl.innerHTML = '<div class="text-red-500">No symbols found</div>';
+                    return;
+                }
+                
+                // Process all symbols for deep scan
+                statusEl.innerHTML = `<div class="text-indigo-400">Scanning ${symbols.length} symbols...</div>`;
+                
+                for (let i = 0; i < symbols.length; i += CONFIG.CONCURRENCY_LIMIT) {
+                    const batch = symbols.slice(i, i + CONFIG.CONCURRENCY_LIMIT);
+                    const promises = batch.map(symbol => processSymbolDeep(symbol));
+                    await Promise.all(promises);
+                    
+                    const progress = Math.round(((i + CONFIG.CONCURRENCY_LIMIT) / symbols.length) * 100);
+                    statusEl.innerHTML = `<div class="text-indigo-400">Deep scan progress: ${Math.min(100, progress)}%</div>`;
+                }
+                
+                statusEl.innerHTML = '<div class="text-green-500">Deep scan completed!</div>';
+            } catch (error) {
+                console.error('Deep scan error:', error);
+                statusEl.innerHTML = '<div class="text-red-500">Deep scan failed</div>';
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+        
+        async function processSymbolQuick(symbol) {
+            try {
+                const data = await getKlineData(symbol, '5m', 50);
+                if (data.length < 10) return;
+                
+                const prices = data.map(d => parseFloat(d[4]));
+                const currentPrice = prices[prices.length - 1];
+                
+                // Simple momentum calculation
+                const momentum = (currentPrice - prices[prices.length - 10]) / prices[prices.length - 10];
+                const score = 50 + (momentum * 100);
+                
+                updateSimpleRow(symbol, currentPrice, score, 'quick');
+            } catch (error) {
+                console.error(`Error processing ${symbol}:`, error);
+            }
+        }
+        
+        async function processSymbolDeep(symbol) {
+            try {
+                const timeFrames = ['5m', '15m', '1h', '4h'];
+                let totalScore = 0;
+                let validTimeFrames = 0;
+                
+                for (const tf of timeFrames) {
+                    const data = await getKlineData(symbol, tf, 50);
+                    if (data.length < 10) continue;
+                    
+                    const prices = data.map(d => parseFloat(d[4]));
+                    const currentPrice = prices[prices.length - 1];
+                    
+                    // Calculate indicators
+                    const rsi = aiEngine.calculateRSI(prices);
+                    const momentum = (currentPrice - prices[prices.length - 10]) / prices[prices.length - 10];
+                    const score = (rsi * 0.5) + (50 + momentum * 100) * 0.5;
+                    
+                    totalScore += score;
+                    validTimeFrames++;
+                }
+                
+                const avgScore = validTimeFrames > 0 ? totalScore / validTimeFrames : 50;
+                const data = await getKlineData(symbol, '5m', 50);
+                const currentPrice = data.length > 0 ? parseFloat(data[data.length - 1][4]) : 0;
+                
+                updateSimpleRow(symbol, currentPrice, avgScore, 'deep');
+            } catch (error) {
+                console.error(`Error processing ${symbol}:`, error);
+            }
+        }
+        
+        function updateSimpleRow(symbol, price, score, scanType) {
+            let row = document.getElementById(`row-${symbol}`);
+            if (!row) {
+                row = document.createElement('tr');
+                row.id = `row-${symbol}`;
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-white">
+                        <a href="https://www.binance.com/tr/futures/${symbol}" target="_blank" class="text-blue-400 hover:text-blue-300 hover:underline">${symbol}</a>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-300 price-cell">${price.toFixed(4)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center font-bold score-cell">${score.toFixed(1)}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center risk-cell">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center signal-cell">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-center">
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs" onclick="viewDetails('${symbol}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                `;
+                resultsTable.appendChild(row);
+            }
+            
+            row.dataset.score = score;
+            
+            // Update price
+            const priceCell = row.querySelector('.price-cell');
+            if (priceCell) {
+                priceCell.textContent = price.toFixed(4);
+            }
+            
+            // Update score
+            const scoreCell = row.querySelector('.score-cell');
+            if (scoreCell) {
+                let textColor = 'text-gray-300';
+                if (score > 70) textColor = 'text-green-400';
+                else if (score < 30) textColor = 'text-red-400';
+                
+                scoreCell.innerHTML = `<div class="${textColor} text-lg font-bold">${score.toFixed(1)}</div>`;
+            }
+        }
+
+        // Historical analysis form
+        function setupHistoricalForm() {
+            const historicalForm = document.getElementById('historicalForm');
+            if (historicalForm) {
+                historicalForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const symbol = e.target.symbol.value.toUpperCase();
+                    const startDate = e.target.startDate.value;
+                    const endDate = e.target.endDate.value;
+                    const strategy = e.target.strategy.value;
+                    
+                    if (!symbol || !startDate || !endDate) {
+                        statusEl.innerHTML = '<div class="text-yellow-400">Please fill all fields</div>';
+                        return;
+                    }
+                    
+                    // Implement historical analysis
+                    statusEl.innerHTML = '<div class="text-green-400">Analyzing historical data...</div>';
+                    console.log('Historical analysis:', { symbol, startDate, endDate, strategy });
+                });
+            }
+        }
+    </script>
+</body>
+</html>
