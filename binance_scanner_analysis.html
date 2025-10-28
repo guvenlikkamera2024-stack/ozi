@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binance Futures Multi-Timeframe Scanner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #131722;
+            color: #d1d4dc;
+        }
+        .table-container {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        table thead th {
+            position: sticky;
+            top: 0;
+            background-color: #1e222d;
+            z-index: 10;
+        }
+        /* Custom Scrollbar */
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: #1e222d;
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background-color: #4a5568;
+            border-radius: 10px;
+            border: 2px solid #1e222d;
+        }
+        .loader {
+            border-top-color: #3498db;
+            -webkit-animation: spinner 1.5s linear infinite;
+            animation: spinner 1.5s linear infinite;
+        }
+        @-webkit-keyframes spinner {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .glowing-border {
+            border: 1px solid transparent;
+            transition: all 0.3s ease-in-out;
+        }
+        .glowing-border:focus-within {
+            border-color: #3b82f6;
+            box-shadow: 0 0 8px 0 #3b82f6;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6 lg:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Başlık ve Kontrol Paneli -->
+        <header class="mb-6 text-center">
+            <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">Binance Futures Multi-Timeframe Scanner</h1>
+            <p class="text-gray-400">Momentum ivmesini, fiyat ve hacim gücünü analiz eder.</p>
+        </header>
+
+        <!-- Geçmiş Veri Analiz Formu -->
+        <div class="bg-[#1e222d] p-4 rounded-lg mb-6 shadow-lg glowing-border">
+            <h2 class="text-lg font-semibold text-white mb-3 border-b border-gray-700 pb-2">Geçmiş Veri Analizi</h2>
+            <form id="historicalForm" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div>
+                    <label for="symbolInput" class="block text-sm font-medium text-gray-300 mb-1">Coin Sembolü</label>
+                    <input type="text" id="symbolInput" name="symbol" placeholder="Örn: BTCUSDT" class="w-full bg-[#131722] text-white border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="dateInput" class="block text-sm font-medium text-gray-300 mb-1">Tarih</label>
+                    <input type="date" id="dateInput" name="date" class="w-full bg-[#131722] text-white border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" style="color-scheme: dark;">
+                </div>
+                <div>
+                    <label for="timeInput" class="block text-sm font-medium text-gray-300 mb-1">Saat</label>
+                    <input type="time" id="timeInput" name="time" class="w-full bg-[#131722] text-white border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" style="color-scheme: dark;">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Analiz Et</button>
+            </form>
+            <div id="historicalResult" class="mt-4"></div>
+        </div>
+
+        <!-- Tarayıcı Paneli -->
+        <div class="bg-[#1e222d] p-4 rounded-lg shadow-lg">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 border-b border-gray-700 pb-3 gap-4">
+                 <h2 class="text-lg font-semibold text-white">Canlı Tarayıcı</h2>
+                 <div class="flex items-center gap-3">
+                    <button id="quickScanBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Hızlı Tara</button>
+                    <button id="deepScanBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Derin Tara</button>
+                 </div>
+            </div>
+            
+            <div id="status" class="text-center my-4"></div>
+
+            <!-- Filtreleme Paneli -->
+            <div id="filterPanel" class="hidden my-4 p-3 bg-[#131722] rounded-lg border border-gray-700 flex items-center justify-center gap-4">
+                <label for="scoreFilter" class="text-sm font-medium text-gray-300">Minimum Skor:</label>
+                <input type="number" id="scoreFilter" name="scoreFilter" min="0" max="100" placeholder="Örn: 70" class="w-24 bg-[#1e222d] text-white border border-gray-600 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button id="applyFilterBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md transition duration-300">Filtrele</button>
+                <button id="resetFilterBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-1 px-3 rounded-md transition duration-300">Sıfırla</button>
+            </div>
+            
+            <div id="loader" class="hidden flex justify-center items-center my-8">
+                <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-500 h-12 w-12"></div>
+                <p class="ml-4 text-gray-300">Veriler yükleniyor, lütfen bekleyin...</p>
+            </div>
+
+            <!-- Sonuç Tablosu -->
+            <div class="table-container">
+                <table class="min-w-full divide-y divide-gray-700">
+                    <thead class="bg-[#1e222d]">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Sembol</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Fiyat</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Skor</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Genel Sinyal</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">5 dk</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">15 dk</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">1 sa</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">2 sa</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">4 sa</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Günlük</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTable" class="bg-[#131722] divide-y divide-gray-800">
+                        <!-- Veriler JavaScript ile eklenecek -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://fapi.binance.com';
+        const KLINE_LIMIT = 200;
+        const MOM_LENGTH = 14;
+        const ALL_TIME_FRAMES = ['5m', '15m', '1h', '2h', '4h', '1d'];
+        const QUICK_TIME_FRAMES = ['5m', '1h', '4h'];
+        const TIME_FRAME_WEIGHTS = { '5m': 1, '15m': 2, '1h': 3, '2h': 4, '4h': 5, '1d': 6 };
+        const CONCURRENCY_LIMIT = 20;
+
+        const loader = document.getElementById('loader');
+        const statusEl = document.getElementById('status');
+        const resultsTable = document.getElementById('resultsTable');
+        const quickScanBtn = document.getElementById('quickScanBtn');
+        const deepScanBtn = document.getElementById('deepScanBtn');
+        const historicalForm = document.getElementById('historicalForm');
+        const historicalResult = document.getElementById('historicalResult');
+        const filterPanel = document.getElementById('filterPanel');
+        const scoreFilterInput = document.getElementById('scoreFilter');
+        const applyFilterBtn = document.getElementById('applyFilterBtn');
+        const resetFilterBtn = document.getElementById('resetFilterBtn');
+
+        // --- İndikatör Hesaplama Mantığı ---
+        
+        function sigmoid(x) {
+            return 2.0 / (1.0 + Math.exp(-x)) - 1.0;
+        }
+
+        /**
+         * Fiyat ve Hacim değişimlerine dayalı normalize edilmiş skorlar hesaplar.
+         * @param {Array} data - Mum verisi.
+         * @param {number} period - Hesaplama periyodu.
+         * @returns {{priceScore: number, volumeScore: number}}
+         */
+        function calculateAdvancedMetrics(data, period = 14) {
+             if (data.length < period * 2) { // Yeterli geçmiş veri olup olmadığını kontrol et
+                return { priceScore: 50, volumeScore: 50 };
+            }
+
+            const closes = data.map(d => parseFloat(d[4]));
+            const volumes = data.map(d => parseFloat(d[5]));
+
+            // 1. Fiyat Skoru (son 'period' mumdaki yüzdesel değişime göre)
+            const currentPrice = closes[closes.length - 1];
+            const pastPrice = closes[closes.length - period];
+            const priceChange = ((currentPrice - pastPrice) / pastPrice) * 100;
+            // Fiyat değişimini -1 ile 1 arasına sıkıştırıp 0-100 ölçeğine çevir. %5'lik bir değişim güçlü kabul edilir.
+            const priceScore = 50 + (sigmoid(priceChange / 2.5) * 50);
+
+            // 2. Hacim Skoru (son 'period' mumun ortalama hacminin bir önceki periyoda göre değişimi)
+            const recentVolumes = volumes.slice(-period);
+            const avgRecentVolume = recentVolumes.reduce((a, b) => a + b, 0) / period;
+            const previousVolumes = volumes.slice(-period * 2, -period);
+            const avgPreviousVolume = previousVolumes.reduce((a, b) => a + b, 0) / previousVolumes.length;
+            
+            // Hacim oranını hesapla (0'a bölünmeyi önle)
+            const volumeRatio = avgPreviousVolume > 0 ? (avgRecentVolume / avgPreviousVolume) - 1 : 0;
+            // Hacim oranını -1 ile 1 arasına sıkıştırıp 0-100 ölçeğine çevir. %100'lük bir artış (oran=1) güçlü kabul edilir.
+            const volumeScore = 50 + (sigmoid(volumeRatio) * 50);
+            
+            return { 
+                priceScore: Math.max(0, Math.min(100, priceScore)), 
+                volumeScore: Math.max(0, Math.min(100, volumeScore)) 
+            };
+        }
+
+        function calculateIndicators(data) {
+            if (data.length < MOM_LENGTH + 2) {
+                return { 
+                    signal: 'data_yetersiz', 
+                    score: 50, 
+                    scores: [], 
+                    advancedMetrics: { priceScore: 50, volumeScore: 50 },
+                    momentumScore: 50 
+                };
+            }
+
+            const closes = data.map(d => parseFloat(d[4]));
+            
+            let momentums = [];
+            for (let i = MOM_LENGTH; i < closes.length; i++) {
+                momentums.push(closes[i] - closes[i - MOM_LENGTH]);
+            }
+
+            let momChanges = [];
+            for (let i = 1; i < momentums.length; i++) {
+                momChanges.push(momentums[i] - momentums[i - 1]);
+            }
+
+            let cumBuyer = 0.0;
+            let cumSeller = 0.0;
+            let scoreHistory = [];
+
+            for (let i = 0; i < momChanges.length; i++) {
+                const change = momChanges[i];
+                if (change > 0) {
+                    cumBuyer += change;
+                    cumSeller = Math.max(cumSeller - change, 0);
+                } else if (change < 0) {
+                    cumSeller += Math.abs(change);
+                    cumBuyer = Math.max(cumBuyer - Math.abs(change), 0);
+                }
+                
+                const priceIndex = i + 1 + MOM_LENGTH;
+                const currentPrice = closes[priceIndex];
+                
+                const normBuyer = sigmoid(cumBuyer / currentPrice * 100);
+                const normSeller = sigmoid(cumSeller / currentPrice * 100);
+                const score = 50 + (normBuyer - normSeller) * 50;
+                scoreHistory.push(score);
+            }
+            
+            const lastPrice = closes[closes.length - 1];
+            const lastNormBuyer = sigmoid(cumBuyer / lastPrice * 100);
+            const lastNormSeller = sigmoid(cumSeller / lastPrice * 100);
+
+            // Bu, momentum ivmesini ölçen orijinal skordur.
+            const momentumAccelerationScore = 50 + (lastNormBuyer - lastNormSeller) * 50;
+
+            // --- YENİ ENTEGRASYON ---
+            const advancedMetrics = calculateAdvancedMetrics(data);
+
+            // Skorları ağırlıklandırarak birleştir
+            const finalScore = 
+                (momentumAccelerationScore * 0.5) +  // Momentum ivmesi %50 ağırlık
+                (advancedMetrics.priceScore * 0.25) + // Fiyat gücü %25 ağırlık
+                (advancedMetrics.volumeScore * 0.25); // Hacim gücü %25 ağırlık
+
+            let signal = 'notr';
+            if (lastNormBuyer > lastNormSeller && lastNormBuyer > 0.1) signal = 'bull';
+            if (lastNormSeller > lastNormBuyer && lastNormSeller > 0.1) signal = 'bear';
+
+            const lastScores = scoreHistory.slice(-3);
+
+            return { 
+                signal, 
+                score: finalScore, 
+                scores: lastScores, 
+                advancedMetrics: advancedMetrics,
+                momentumScore: momentumAccelerationScore
+            };
+        }
+
+
+        // --- API Fonksiyonları ---
+
+        async function getSymbols() {
+            try {
+                const response = await fetch(`${API_BASE}/fapi/v1/exchangeInfo`);
+                const data = await response.json();
+                return data.symbols
+                    .filter(s => s.contractType === 'PERPETUAL' && s.quoteAsset === 'USDT' && !s.symbol.includes('_'))
+                    .map(s => s.symbol);
+            } catch (error) {
+                console.error('Semboller alınamadı:', error);
+                statusEl.innerHTML = `<div class="text-red-500">Hata: Binance API'den semboller alınamadı. Lütfen daha sonra tekrar deneyin.</div>`;
+                return [];
+            }
+        }
+
+        async function getKlineData(symbol, interval, limit = KLINE_LIMIT, endTime = null) {
+            let url = `${API_BASE}/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+            if (endTime) {
+                url += `&endTime=${endTime}`;
+            }
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`API isteği başarısız: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error(`${symbol} için ${interval} verisi alınamadı:`, error);
+                return [];
+            }
+        }
+
+
+        // --- UI Güncelleme Fonksiyonları ---
+
+        function getSignalHTML(signal) {
+            switch(signal) {
+                case 'bull': return '<span class="text-green-400 font-bold">AL</span>';
+                case 'bear': return '<span class="text-red-400 font-bold">SAT</span>';
+                case 'notr': return '<span class="text-gray-500">NÖTR</span>';
+                case 'data_yetersiz': return '<span class="text-yellow-500 text-xs">VERİ YOK</span>';
+                default: return '';
+            }
+        }
+
+        function getOverallSignalHTML(signals, scannedTimeFrames) {
+              const bullCount = signals.filter(s => s === 'bull').length;
+              const bearCount = signals.filter(s => s === 'bear').length;
+              const totalSignals = scannedTimeFrames.length;
+
+              if (totalSignals === 0) {
+                  return '<span class="bg-gray-700 text-gray-300 text-xs font-bold mr-2 px-2.5 py-0.5 rounded-full">BEKLİYOR</span>';
+              }
+
+              const bullRatio = bullCount / totalSignals;
+              
+              if (bullRatio >= 0.7 && bullCount >= Math.min(3, totalSignals)) {
+                  return '<span class="bg-green-800 text-green-200 text-xs font-bold mr-2 px-2.5 py-0.5 rounded-full">GÜÇLÜ AL</span>';
+              } else if (bullRatio <= 0.3 && bearCount >= Math.min(3, totalSignals)) {
+                  return '<span class="bg-red-800 text-red-200 text-xs font-bold mr-2 px-2.5 py-0.5 rounded-full">GÜÇLÜ SAT</span>';
+              } else if (bullCount > bearCount) {
+                   return '<span class="bg-green-800 bg-opacity-50 text-green-300 text-xs font-bold mr-2 px-2.5 py-0.5 rounded-full">AL AĞIRLIKLI</span>';
+              } else if (bearCount > bullCount) {
+                   return '<span class="bg-red-800 bg-opacity-50 text-red-300 text-xs font-bold mr-2 px-2.5 py-0.5 rounded-full">SAT AĞIRLIKLI</span>';
+              } else {
+                  return '<span class="bg-yellow-800 bg-opacity-50 text-yellow-300 text-xs font-bold mr-2 px-2.5 py-0.5 rounded-full">KARARSIZ</span>';
+              }
+        }
+
+        function renderRow(symbol) {
+            const row = document.createElement('tr');
+            row.id = `row-${symbol}`;
+            row.innerHTML = `
+                <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-white">
+                    <a href="https://www.binance.com/tr/futures/${symbol}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 hover:underline">${symbol}</a>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-300 price-cell">...</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-center font-bold score-cell">...</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-center overall-signal"></td>
+                ${ALL_TIME_FRAMES.map(tf => `<td class="px-4 py-3 whitespace-nowrap text-sm text-center" id="cell-${symbol}-${tf}">...</td>`).join('')}
+            `;
+            resultsTable.appendChild(row);
+        }
+
+        function updateCell(symbol, timeFrame, signal) {
+            const cell = document.getElementById(`cell-${symbol}-${timeFrame}`);
+            if (cell) cell.innerHTML = getSignalHTML(signal);
+        }
+
+        function updatePriceCell(symbol, price) {
+            const row = document.getElementById(`row-${symbol}`);
+            if (!row) return;
+            const priceCell = row.querySelector('.price-cell');
+            if (priceCell) {
+                const decimals = price < 1 ? 4 : price < 100 ? 2 : 1;
+                priceCell.textContent = parseFloat(price).toFixed(decimals);
+            }
+        }
+
+        function updateScoreCell(symbol, score, scores5m, advancedMetrics5m, momentumScore5m) {
+            const row = document.getElementById(`row-${symbol}`);
+            if (!row) return;
+            
+            row.dataset.score = score; // Store score for sorting
+            const scoreCell = row.querySelector('.score-cell');
+            
+            let textColor = 'text-gray-300';
+            if (score > 65) textColor = 'text-green-400';
+            if (score < 35) textColor = 'text-red-400';
+
+            // --- YENİ GÖSTERGE ---
+            let metricsHTML = '';
+            if (advancedMetrics5m && momentumScore5m !== undefined) {
+                const priceColor = advancedMetrics5m.priceScore > 55 ? 'text-green-400' : advancedMetrics5m.priceScore < 45 ? 'text-red-400' : 'text-gray-500';
+                const volumeColor = advancedMetrics5m.volumeScore > 55 ? 'text-green-400' : advancedMetrics5m.volumeScore < 45 ? 'text-red-400' : 'text-gray-500';
+                const momentumColor = momentumScore5m > 55 ? 'text-green-400' : momentumScore5m < 45 ? 'text-red-400' : 'text-gray-500';
+                
+                metricsHTML = `
+                    <div class="flex items-center space-x-1 text-xs font-mono" title="Fiyat (F), Hacim (H) ve Momentum (M) Gücü (5dk)">
+                        <span class="${priceColor}" title="Fiyat Skoru: ${advancedMetrics5m.priceScore.toFixed(1)}">F</span>
+                        <span class="${volumeColor}" title="Hacim Skoru: ${advancedMetrics5m.volumeScore.toFixed(1)}">H</span>
+                        <span class="${momentumColor}" title="Momentum Skoru: ${momentumScore5m.toFixed(1)}">M</span>
+                    </div>
+                `;
+            }
+            
+            const mainScoreHTML = `
+                <div class="flex items-baseline justify-center gap-2">
+                    <span>${score.toFixed(1)}</span>
+                    ${metricsHTML}
+                </div>`;
+
+            let trendHTML = '';
+            if (scores5m && scores5m.length > 0) {
+                trendHTML = '<div class="flex justify-center items-center space-x-1 mt-1">';
+                const paddedScores = [...Array(Math.max(0, 3 - scores5m.length)).fill(null), ...scores5m];
+                
+                for (let i = 0; i < paddedScores.length; i++) {
+                    const s = paddedScores[i];
+                    let color = 'bg-gray-600'; // Nötr/veri yok için
+                    if (s !== null) {
+                        if (s > 55) color = 'bg-green-500';
+                        if (s < 45) color = 'bg-red-500';
+                    }
+                    const size = (i === paddedScores.length - 1) ? 'w-2 h-2' : 'w-1.5 h-1.5';
+                    trendHTML += `<div class="${size} rounded-full ${color}" title="5dk Momentum İvme Skoru: ${s ? s.toFixed(1) : 'N/A'}"></div>`;
+                }
+                trendHTML += '</div>';
+            }
+            
+            scoreCell.innerHTML = `<div class="${textColor}">${mainScoreHTML}${trendHTML}</div>`;
+        }
+
+        function updateOverallSignal(symbol, signals, scannedTimeFrames) {
+            const row = document.getElementById(`row-${symbol}`);
+            if (row) {
+                const overallCell = row.querySelector('.overall-signal');
+                overallCell.innerHTML = getOverallSignalHTML(signals, scannedTimeFrames);
+            }
+        }
+
+        // --- Ana Tarayıcı Mantığı ---
+
+        async function processSymbol(symbol, timeFramesToScan) {
+            let timeFrameResults = {};
+            let fiveMinScores = [];
+            let fiveMinAdvancedMetrics = null;
+            let fiveMinMomentumScore = null;
+            
+            for (const tf of timeFramesToScan) {
+                const data = await getKlineData(symbol, tf);
+                
+                if (tf === '5m' && data.length > 0) {
+                    const lastCandle = data[data.length - 1];
+                    const currentPrice = parseFloat(lastCandle[4]);
+                    updatePriceCell(symbol, currentPrice);
+                }
+
+                const result = calculateIndicators(data);
+                if (tf === '5m') {
+                    fiveMinScores = result.scores;
+                    fiveMinAdvancedMetrics = result.advancedMetrics;
+                    fiveMinMomentumScore = result.momentumScore;
+                }
+                timeFrameResults[tf] = result;
+                updateCell(symbol, tf, result.signal);
+            }
+
+            const signals = timeFramesToScan.map(tf => timeFrameResults[tf]?.signal || 'notr');
+            updateOverallSignal(symbol, signals, timeFramesToScan);
+
+            let totalScore = 0;
+            let totalWeight = 0;
+            for (const tf of timeFramesToScan) {
+                if (timeFrameResults[tf] && timeFrameResults[tf].signal !== 'data_yetersiz') {
+                    totalScore += timeFrameResults[tf].score * TIME_FRAME_WEIGHTS[tf];
+                    totalWeight += TIME_FRAME_WEIGHTS[tf];
+                }
+            }
+            
+            const overallScore = totalWeight > 0 ? totalScore / totalWeight : 50;
+            updateScoreCell(symbol, overallScore, fiveMinScores, fiveMinAdvancedMetrics, fiveMinMomentumScore);
+        }
+
+        async function startScan(scanType) {
+            loader.classList.remove('hidden');
+            filterPanel.classList.add('hidden');
+            quickScanBtn.disabled = true;
+            deepScanBtn.disabled = true;
+            quickScanBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            deepScanBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            resultsTable.innerHTML = '';
+            statusEl.innerHTML = '<div class="text-blue-400">Uygun semboller alınıyor...</div>';
+
+            const symbols = await getSymbols();
+            if (symbols.length === 0) {
+                loader.classList.add('hidden');
+                quickScanBtn.disabled = false;
+                deepScanBtn.disabled = false;
+                quickScanBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                deepScanBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                return;
+            }
+
+            const timeFramesToScan = scanType === 'quick' ? QUICK_TIME_FRAMES : ALL_TIME_FRAMES;
+
+            statusEl.innerHTML = `<div class="text-blue-400">${symbols.length} adet sembol bulundu. Tarama başlıyor...</div>`;
+            symbols.forEach(renderRow);
+            
+            for (let i = 0; i < symbols.length; i += CONCURRENCY_LIMIT) {
+                const batch = symbols.slice(i, i + CONCURRENCY_LIMIT);
+                
+                const startNum = i + 1;
+                const endNum = Math.min(i + CONCURRENCY_LIMIT, symbols.length);
+                statusEl.innerHTML = `<div class="text-blue-400">Taranıyor: ${startNum}-${endNum} / ${symbols.length}</div>`;
+
+                const promises = batch.map(symbol => processSymbol(symbol, timeFramesToScan));
+                await Promise.all(promises);
+            }
+
+            statusEl.innerHTML = '<div class="text-blue-400">Tarama tamamlandı. Sonuçlar sıralanıyor...</div>';
+            
+            const rows = Array.from(resultsTable.querySelectorAll('tr'));
+            rows.sort((a, b) => {
+                const scoreA = parseFloat(a.dataset.score) || 0;
+                const scoreB = parseFloat(b.dataset.score) || 0;
+                return scoreB - scoreA; // Descending order
+            });
+
+            rows.forEach(row => resultsTable.appendChild(row));
+            
+            statusEl.innerHTML = '<div class="text-green-500">Tarama tamamlandı ve sonuçlar skora göre sıralandı!</div>';
+            loader.classList.add('hidden');
+            filterPanel.classList.remove('hidden');
+            quickScanBtn.disabled = false;
+            deepScanBtn.disabled = false;
+            quickScanBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            deepScanBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        // --- Geçmiş Veri Analiz Mantığı ---
+        async function analyzeHistoricalData(symbol, date, time) {
+            historicalResult.innerHTML = '<p class="text-blue-400">Geçmiş veriler analiz ediliyor...</p>';
+            const timestamp = new Date(`${date}T${time}:00Z`).getTime();
+
+            if (isNaN(timestamp)) {
+                historicalResult.innerHTML = '<p class="text-red-500">Hata: Geçersiz tarih veya saat formatı.</p>';
+                return;
+            }
+            
+            let resultsHTML = `<div class="bg-[#131722] p-3 rounded-md border border-gray-700">`;
+            resultsHTML += `<h3 class="text-md font-bold text-white mb-2">${symbol} - ${date} ${time} Analizi</h3>`;
+            resultsHTML += `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">`;
+            
+            let allSignals = [];
+            let timeFrameResults = {};
+            
+            for(const tf of ALL_TIME_FRAMES) {
+                const data = await getKlineData(symbol, tf, KLINE_LIMIT, timestamp);
+                const result = calculateIndicators(data);
+                allSignals.push(result.signal);
+                timeFrameResults[tf] = result;
+                resultsHTML += `
+                    <div class="text-center p-2 bg-[#1e222d] rounded">
+                        <p class="text-xs text-gray-400 uppercase">${tf}</p>
+                        <p class="text-lg font-bold">${getSignalHTML(result.signal)}</p>
+                    </div>
+                `;
+            }
+
+            let totalScore = 0;
+            let totalWeight = 0;
+            for (const tf of ALL_TIME_FRAMES) {
+                if (timeFrameResults[tf].signal !== 'data_yetersiz') {
+                    totalScore += timeFrameResults[tf].score * TIME_FRAME_WEIGHTS[tf];
+                    totalWeight += TIME_FRAME_WEIGHTS[tf];
+                }
+            }
+            const overallScore = totalWeight > 0 ? totalScore / totalWeight : 50;
+            let scoreTextColor = 'text-gray-300';
+            if (overallScore > 65) scoreTextColor = 'text-green-400';
+            if (overallScore < 35) scoreTextColor = 'text-red-400';
+
+            // Metrik göstergeleri
+            const fiveMinResult = timeFrameResults['5m'];
+            const fiveMinMetrics = fiveMinResult.advancedMetrics;
+            const fiveMinMomentumScore = fiveMinResult.momentumScore;
+
+            let metricsHTML = '';
+            if (fiveMinMetrics && fiveMinMomentumScore !== undefined) {
+                const priceColor = fiveMinMetrics.priceScore > 55 ? 'text-green-400' : fiveMinMetrics.priceScore < 45 ? 'text-red-400' : 'text-gray-500';
+                const volumeColor = fiveMinMetrics.volumeScore > 55 ? 'text-green-400' : fiveMinMetrics.volumeScore < 45 ? 'text-red-400' : 'text-gray-500';
+                const momentumColor = fiveMinMomentumScore > 55 ? 'text-green-400' : fiveMinMomentumScore < 45 ? 'text-red-400' : 'text-gray-500';
+                metricsHTML = `
+                    <div class="flex items-center space-x-1 text-xs font-mono" title="Fiyat (F), Hacim (H) ve Momentum (M) Gücü (5dk)">
+                        <span class="${priceColor}" title="Fiyat Skoru: ${fiveMinMetrics.priceScore.toFixed(1)}">F</span>
+                        <span class="${volumeColor}" title="Hacim Skoru: ${fiveMinMetrics.volumeScore.toFixed(1)}">H</span>
+                        <span class="${momentumColor}" title="Momentum Skoru: ${fiveMinMomentumScore.toFixed(1)}">M</span>
+                    </div>
+                `;
+            }
+
+            const fiveMinHistScores = timeFrameResults['5m'].scores;
+            let trendHTML = '';
+            if (fiveMinHistScores && fiveMinHistScores.length > 0) {
+                trendHTML = '<div class="flex justify-center items-center space-x-1">';
+                const paddedScores = [...Array(Math.max(0, 3 - fiveMinHistScores.length)).fill(null), ...fiveMinHistScores];
+                for (let i = 0; i < paddedScores.length; i++) {
+                    const s = paddedScores[i];
+                    let color = 'bg-gray-600';
+                    if (s !== null) {
+                        if (s > 55) color = 'bg-green-500';
+                        if (s < 45) color = 'bg-red-500';
+                    }
+                    const size = (i === paddedScores.length - 1) ? 'w-2 h-2' : 'w-1.5 h-1.5';
+                    trendHTML += `<div class="${size} rounded-full ${color}" title="5dk Skor: ${s ? s.toFixed(1) : 'N/A'}"></div>`;
+                }
+                trendHTML += '</div>';
+            }
+
+            resultsHTML += `</div>`;
+            resultsHTML += `<div class="mt-3 text-center flex justify-center items-center gap-4 flex-wrap">
+                <div>
+                    <span class="text-sm text-gray-300 mr-2">Genel Durum:</span>
+                    ${getOverallSignalHTML(allSignals, ALL_TIME_FRAMES)}
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-sm text-gray-300">Skor:</span>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-lg font-bold ${scoreTextColor}">${overallScore.toFixed(1)}</span>
+                        ${metricsHTML}
+                    </div>
+                    ${trendHTML}
+                </div>
+            </div>`;
+            resultsHTML += `</div>`;
+            
+            historicalResult.innerHTML = resultsHTML;
+        }
+
+        // --- Filtreleme Mantığı ---
+        function applyScoreFilter() {
+            const minScore = parseFloat(scoreFilterInput.value);
+            if (isNaN(minScore)) return;
+
+            const rows = resultsTable.querySelectorAll('tr');
+            let visibleCount = 0;
+            rows.forEach(row => {
+                const rowScore = parseFloat(row.dataset.score);
+                if (rowScore >= minScore) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            statusEl.innerHTML = `<div class="text-blue-400">Filtre uygulandı. Skoru ${minScore} üzerinde olan ${visibleCount} sonuç gösteriliyor.</div>`;
+        }
+
+        function resetFilter() {
+            const rows = resultsTable.querySelectorAll('tr');
+            rows.forEach(row => {
+                row.style.display = '';
+            });
+            scoreFilterInput.value = '';
+            statusEl.innerHTML = `<div class="text-green-500">Filtre sıfırlandı. Tüm sonuçlar gösteriliyor.</div>`;
+        }
+
+        // --- Event Listeners ---
+        quickScanBtn.addEventListener('click', () => startScan('quick'));
+        deepScanBtn.addEventListener('click', () => startScan('deep'));
+        applyFilterBtn.addEventListener('click', applyScoreFilter);
+        resetFilterBtn.addEventListener('click', resetFilter);
+
+        historicalForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const symbol = e.target.symbol.value.toUpperCase();
+            const date = e.target.date.value;
+            const time = e.target.time.value;
+
+            if (!symbol || !date || !time) {
+                statusEl.innerHTML = `<div class="text-yellow-400">Lütfen tüm alanları doldurun.</div>`
+                setTimeout(() => statusEl.innerHTML = '', 3000);
+                return;
+            }
+            analyzeHistoricalData(symbol, date, time);
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            const dateStr = now.toISOString().slice(0,10);
+            const timeStr = now.toISOString().slice(11,16);
+            document.getElementById('dateInput').value = dateStr;
+            document.getElementById('timeInput').value = timeStr;
+        });
+    </script>
+</body>
+</html>

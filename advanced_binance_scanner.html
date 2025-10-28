@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced VPM Binance Scanner - Ozican Method</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary-bg: #0a0e1a;
+            --secondary-bg: #131722;
+            --tertiary-bg: #1e222d;
+            --accent-blue: #2962ff;
+            --accent-green: #00c851;
+            --accent-red: #ff4444;
+            --accent-gold: #ffd700;
+            --text-primary: #ffffff;
+            --text-secondary: #b2b5be;
+            --border-color: #2a2e39;
+            --vpm-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --labyrinth-gradient: linear-gradient(45deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+        }
+
+        /* VPM Visualization */
+        .vpm-container {
+            background: var(--vpm-gradient);
+            border-radius: 16px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .vpm-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        /* Multi-Timeframe Labyrinth */
+        .mtf-labyrinth {
+            background: var(--labyrinth-gradient);
+            border-radius: 12px;
+            padding: 16px;
+            position: relative;
+        }
+
+        .timeframe-path {
+            height: 4px;
+            border-radius: 2px;
+            margin: 8px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .path-1h { background: linear-gradient(90deg, #3b82f6, #1d4ed8); }
+        .path-2h { background: linear-gradient(90deg, #8b5cf6, #6d28d9); }
+        .path-4h { background: linear-gradient(90deg, #f59e0b, #d97706); }
+
+        .path-signal {
+            height: 100%;
+            transition: width 0.5s ease;
+            border-radius: 2px;
+        }
+
+        .signal-long { background: var(--accent-green); }
+        .signal-short { background: var(--accent-red); }
+        .signal-neutral { background: #6b7280; }
+
+        /* Volume Flow Indicators */
+        .volume-flow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 8px 0;
+        }
+
+        .buyer-volume {
+            background: linear-gradient(90deg, transparent, var(--accent-green));
+            height: 6px;
+            border-radius: 3px;
+        }
+
+        .seller-volume {
+            background: linear-gradient(90deg, var(--accent-red), transparent);
+            height: 6px;
+            border-radius: 3px;
+        }
+
+        /* USD Flow Meter */
+        .usd-flow-meter {
+            background: var(--tertiary-bg);
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .usd-amount {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent-gold);
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        /* Enhanced Scoring */
+        .enhanced-score {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            position: relative;
+        }
+
+        .score-ring {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, var(--accent-red) 0%, var(--accent-gold) 50%, var(--accent-green) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            position: relative;
+        }
+
+        .score-ring::before {
+            content: '';
+            width: 70px;
+            height: 70px;
+            background: var(--tertiary-bg);
+            border-radius: 50%;
+            position: absolute;
+        }
+
+        .score-value {
+            position: relative;
+            z-index: 1;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        /* Correlation Matrix */
+        .correlation-cell {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin: 2px;
+            display: inline-block;
+            position: relative;
+        }
+
+        .correlation-strong { background: var(--accent-green); }
+        .correlation-medium { background: var(--accent-gold); }
+        .correlation-weak { background: var(--accent-red); }
+
+        /* Glass effects */
+        .glass {
+            background: rgba(30, 34, 45, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+
+        .glass-strong {
+            background: rgba(19, 23, 34, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+        }
+
+        /* Animations */
+        .pulse-glow {
+            animation: pulseGlow 2s infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(102, 126, 234, 0.8); }
+        }
+
+        .flow-animation {
+            animation: flowMove 3s infinite;
+        }
+
+        @keyframes flowMove {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .desktop-only { display: none !important; }
+            .mobile-stack { flex-direction: column !important; }
+            .text-mobile-sm { font-size: 12px !important; }
+        }
+
+        /* Custom scrollbar */
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: var(--secondary-bg);
+            border-radius: 10px;
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--accent-blue), var(--accent-green));
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="p-4 md:p-6 lg:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Enhanced Header with VPM Branding -->
+        <header class="mb-6 text-center">
+            <div class="flex items-center justify-center space-x-4 mb-4">
+                <div class="w-16 h-16 vpm-container flex items-center justify-center pulse-glow">
+                    <span class="text-2xl font-bold text-white">VPM</span>
+                </div>
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold text-white">Advanced VPM Scanner</h1>
+                    <p class="text-sm text-gray-400">Volume • Price • Momentum Correlation System</p>
+                    <p class="text-xs text-purple-400">Powered by Ozican Method™</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- VPM Dashboard Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+            <div class="glass interactive p-4">
+                <div class="text-center">
+                    <div class="enhanced-score">
+                        <div class="score-ring">
+                            <div class="score-value" id="vpmIndex">87</div>
+                        </div>
+                        <p class="text-sm text-white font-semibold">VPM Index</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass interactive p-4">
+                <div class="usd-flow-meter">
+                    <p class="text-sm text-gray-300 mb-1">USD Flow</p>
+                    <div class="usd-amount" id="usdFlow">$2.4M</div>
+                    <div class="flex items-center mt-2">
+                        <div class="buyer-volume flex-1 mr-2" style="width: 60%"></div>
+                        <div class="seller-volume flex-1" style="width: 40%"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Buyer/Seller Ratio</p>
+                </div>
+            </div>
+
+            <div class="glass interactive p-4">
+                <div class="text-center">
+                    <p class="text-sm text-gray-400">Market Regime</p>
+                    <p class="text-xl font-bold text-green-400" id="marketRegime">Bullish Momentum</p>
+                    <div class="mt-2">
+                        <div class="correlation-cell correlation-strong" title="Strong correlation"></div>
+                        <div class="correlation-cell correlation-medium" title="Medium correlation"></div>
+                        <div class="correlation-cell correlation-strong" title="Strong correlation"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass interactive p-4">
+                <div class="text-center">
+                    <p class="text-sm text-gray-400">Signal Quality</p>
+                    <p class="text-2xl font-bold text-purple-400" id="signalQuality">94%</p>
+                    <div class="w-full bg-gray-700 rounded-full h-2 mt-2">
+                        <div class="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-500" style="width: 94%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass interactive p-4">
+                <div class="text-center">
+                    <p class="text-sm text-gray-400">Active Patterns</p>
+                    <p class="text-2xl font-bold text-yellow-400" id="activePatterns">12</p>
+                    <div class="flex justify-center mt-1 space-x-1">
+                        <i class="fas fa-arrow-up text-green-400 text-sm"></i>
+                        <i class="fas fa-arrow-down text-red-400 text-sm"></i>
+                        <i class="fas fa-arrows-alt-h text-yellow-400 text-sm"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Multi-Timeframe Labyrinth Visualization -->
+        <div class="glass-strong p-6 mb-6">
+            <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+                <i class="fas fa-route text-purple-400 mr-2"></i>
+                Multi-Timeframe Labyrinth (M.T.F.)
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="mtf-labyrinth">
+                    <h4 class="text-sm font-medium text-white mb-3 flex items-center">
+                        <i class="fas fa-clock text-blue-400 mr-2"></i>1H Path (Quick Decisions)
+                    </h4>
+                    <div class="timeframe-path path-1h">
+                        <div class="path-signal signal-long" style="width: 75%"></div>
+                    </div>
+                    <p class="text-xs text-gray-300 mt-2">Bright corridor - Strong long bias</p>
+                </div>
+
+                <div class="mtf-labyrinth">
+                    <h4 class="text-sm font-medium text-white mb-3 flex items-center">
+                        <i class="fas fa-clock text-purple-400 mr-2"></i>2H Path (Balance)
+                    </h4>
+                    <div class="timeframe-path path-2h">
+                        <div class="path-signal signal-neutral" style="width: 50%"></div>
+                    </div>
+                    <p class="text-xs text-gray-300 mt-2">Foggy zone - Indecision area</p>
+                </div>
+
+                <div class="mtf-labyrinth">
+                    <h4 class="text-sm font-medium text-white mb-3 flex items-center">
+                        <i class="fas fa-clock text-orange-400 mr-2"></i>4H Path (Trend Define)
+                    </h4>
+                    <div class="timeframe-path path-4h">
+                        <div class="path-signal signal-long" style="width: 85%"></div>
+                    </div>
+                    <p class="text-xs text-gray-300 mt-2">Golden corridor - Major uptrend</p>
+                </div>
+            </div>
+            
+            <div class="mt-4 p-3 bg-gradient-to-r from-green-600/20 to-blue-600/20 rounded-lg border border-green-500/30">
+                <p class="text-sm text-white flex items-center">
+                    <i class="fas fa-lightbulb text-yellow-400 mr-2"></i>
+                    <strong>Labyrinth Status:</strong> Paths converging to bullish exit - High probability setup detected
+                </p>
+            </div>
+        </div>
+
+        <!-- Enhanced Historical Analysis -->
+        <div class="glass-strong p-4 rounded-lg mb-6 shadow-lg">
+            <h2 class="text-lg font-semibold text-white mb-3 border-b border-gray-700 pb-2 flex items-center">
+                <i class="fas fa-brain text-purple-400 mr-2"></i>
+                VPM Historical Analysis
+            </h2>
+            <form id="historicalForm" class="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+                <div>
+                    <label for="symbolInput" class="block text-sm font-medium text-gray-300 mb-1">Symbol</label>
+                    <input type="text" id="symbolInput" name="symbol" placeholder="BTCUSDT" 
+                           class="w-full bg-gray-800 text-white border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div>
+                    <label for="dateInput" class="block text-sm font-medium text-gray-300 mb-1">Date</label>
+                    <input type="date" id="dateInput" name="date" 
+                           class="w-full bg-gray-800 text-white border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div>
+                    <label for="timeInput" class="block text-sm font-medium text-gray-300 mb-1">Time</label>
+                    <input type="time" id="timeInput" name="time" 
+                           class="w-full bg-gray-800 text-white border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div>
+                    <label for="vpmModeSelect" class="block text-sm font-medium text-gray-300 mb-1">VPM Mode</label>
+                    <select id="vpmModeSelect" class="w-full bg-gray-800 text-white border border-gray-600 rounded-md px-3 py-2">
+                        <option value="standard">Standard VPM</option>
+                        <option value="enhanced">Enhanced VPM</option>
+                        <option value="labyrinth">MTF Labyrinth</option>
+                        <option value="correlation">Correlation Focus</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="qualityFilter" class="block text-sm font-medium text-gray-300 mb-1">Quality Filter</label>
+                    <select id="qualityFilter" class="w-full bg-gray-800 text-white border border-gray-600 rounded-md px-3 py-2">
+                        <option value="all">All Signals</option>
+                        <option value="high">High Quality Only</option>
+                        <option value="premium">Premium Only</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">
+                    <i class="fas fa-chart-area mr-1"></i> VPM Analyze
+                </button>
+            </form>
+            <div id="historicalResult" class="mt-4"></div>
+        </div>
+
+        <!-- Enhanced Scanner Panel -->
+        <div class="glass-strong p-4 rounded-lg shadow-lg">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 border-b border-gray-700 pb-3 gap-4">
+                <h2 class="text-lg font-semibold text-white flex items-center">
+                    <i class="fas fa-satellite-dish text-green-400 mr-2"></i>
+                    VPM Live Scanner - Advanced Signal Quality
+                </h2>
+                <div class="flex items-center gap-3 mobile-stack mobile-full">
+                    <select id="scanModeSelect" class="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm">
+                        <option value="vpm_standard">VPM Standard</option>
+                        <option value="vmp_enhanced">VPM Enhanced</option>
+                        <option value="labyrinth_mode">Labyrinth Mode</option>
+                        <option value="correlation_hunt">Correlation Hunt</option>
+                        <option value="premium_quality">Premium Quality</option>
+                    </select>
+                    <button id="vpmScanBtn" class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">
+                        <i class="fas fa-rocket mr-1"></i> VPM Scan
+                    </button>
+                    <button id="autoScanToggle" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">
+                        <i class="fas fa-sync mr-1"></i> Auto
+                    </button>
+                </div>
+            </div>
+            
+            <div id="status" class="text-center my-4"></div>
+
+            <!-- Advanced Filter Panel -->
+            <div id="filterPanel" class="hidden my-4 p-4 glass rounded-lg border border-purple-500/30">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                    <div>
+                        <label class="text-sm font-medium text-gray-300">VPM Score:</label>
+                        <input type="range" id="vpmScoreFilter" min="0" max="100" value="70" class="w-full mt-1">
+                        <div class="text-xs text-gray-400 text-center" id="vmpScoreValue">70+</div>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-300">USD Flow:</label>
+                        <select id="usdFlowFilter" class="w-full mt-1 bg-gray-800 border border-gray-600 rounded-md px-3 py-1">
+                            <option value="all">All Flows</option>
+                            <option value="high">High Flow (>$1M)</option>
+                            <option value="massive">Massive (>$5M)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-300">Labyrinth:</label>
+                        <select id="labyrinthFilter" class="w-full mt-1 bg-gray-800 border border-gray-600 rounded-md px-3 py-1">
+                            <option value="all">All Paths</option>
+                            <option value="aligned">Aligned Paths</option>
+                            <option value="golden">Golden Corridor</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-300">Quality:</label>
+                        <select id="qualityFilterSelect" class="w-full mt-1 bg-gray-800 border border-gray-600 rounded-md px-3 py-1">
+                            <option value="all">All Quality</option>
+                            <option value="premium">Premium (90%+)</option>
+                            <option value="elite">Elite (95%+)</option>
+                        </select>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button id="applyFilterBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-md transition duration-300">Apply</button>
+                        <button id="resetFilterBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 rounded-md transition duration-300">Reset</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="loader" class="hidden flex justify-center items-center my-8">
+                <div class="w-16 h-16 vmp-container flex items-center justify-center pulse-glow">
+                    <i class="fas fa-brain fa-spin text-white text-2xl"></i>
+                </div>
+                <p class="ml-4 text-gray-300">VPM engine analyzing market correlations...</p>
+            </div>
+
+            <!-- Enhanced Results Table -->
+            <div class="table-container" style="max-height: 60vh; overflow-y: auto;">
+                <table class="min-w-full divide-y divide-gray-700">
+                    <thead class="bg-gray-800 sticky top-0 z-10">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Symbol</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Price</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">VPM Score</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">USD Flow</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Buyer/Seller</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">MTF Status</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Signal</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">1h</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider desktop-only">2h</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">4h</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">1d</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTable" class="bg-gray-900 divide-y divide-gray-800">
+                        <!-- Results populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <script>
+        // Enhanced Configuration with VPM Parameters
+        const CONFIG = {
+            API_BASE: 'https://fapi.binance.com',
+            KLINE_LIMIT: 200,
+            MOM_LENGTH: 14,
+            ALL_TIME_FRAMES: ['1h', '2h', '4h', '1d'],
+            QUICK_TIME_FRAMES: ['1h', '4h'],
+            TIME_FRAME_WEIGHTS: { '1h': 1, '2h': 2, '4h': 4, '1d': 6 },
+            CONCURRENCY_LIMIT: 15,
+            VPM_THRESHOLD: 70,
+            USD_FLOW_THRESHOLD: 1000000, // $1M
+            QUALITY_THRESHOLD: 0.9
+        };
+
+        // VPM (Volume Price Momentum) Calculator - Ozican Method
+        class VPMCalculator {
+            constructor() {
+                this.cache = new Map();
+            }
+
+            async calculateVPM(data) {
+                if (data.length < 50) {
+                    return {
+                        vpmScore: 50,
+                        buyerVolume: 0,
+                        sellerVolume: 0,
+                        usdFlow: 0,
+                        priceCorrelation: 0,
+                        volumeCorrelation: 0,
+                        momentumCorrelation: 0,
+                        quality: 0.5
+                    };
+                }
+
+                const closes = data.map(d => parseFloat(d[4]));
+                const highs = data.map(d => parseFloat(d[2]));
+                const lows = data.map(d => parseFloat(d[3]));
+                const volumes = data.map(d => parseFloat(d[5]));
+                const opens = data.map(d => parseFloat(d[1]));
+
+                // Ozican's Buyer/Seller Volume Calculation
+                const buyerVolumeClose = [];
+                const sellerVolumeClose = [];
+                const buyerVolumeHigh = [];
+                const sellerVolumeHigh = [];
+
+                for (let i = 0; i < data.length; i++) {
+                    const high = highs[i];
+                    const low = lows[i];
+                    const close = closes[i];
+                    const volume = volumes[i];
+
+                    if (high === low) {
+                        buyerVolumeClose.push(0);
+                        sellerVolumeClose.push(0);
+                        buyerVolumeHigh.push(0);
+                        sellerVolumeHigh.push(0);
+                    } else {
+                        // Close multiplier calculations
+                        buyerVolumeClose.push(volume * (close - low) / (high - low) * close);
+                        sellerVolumeClose.push(volume * (high - close) / (high - low) * close);
+                        
+                        // High multiplier calculations
+                        buyerVolumeHigh.push(volume * (close - low) / (high - low) * high);
+                        sellerVolumeHigh.push(volume * (high - close) / (high - low) * high);
+                    }
+                }
+
+                // Calculate cumulative volumes
+                const totalBuyerVolume = buyerVolumeClose.reduce((a, b) => a + b, 0);
+                const totalSellerVolume = sellerVolumeClose.reduce((a, b) => a + b, 0);
+                const totalVolume = totalBuyerVolume + totalSellerVolume;
+
+                // USD Flow estimation (Volume * Average Price)
+                const avgPrice = closes.reduce((a, b) => a + b, 0) / closes.length;
+                const usdFlow = totalVolume * avgPrice;
+
+                // Price momentum calculation
+                const priceChanges = [];
+                for (let i = 1; i < closes.length; i++) {
+                    priceChanges.push((closes[i] - closes[i-1]) / closes[i-1] * 100);
+                }
+
+                // Volume momentum calculation
+                const volumeChanges = [];
+                for (let i = 1; i < volumes.length; i++) {
+                    volumeChanges.push((volumes[i] - volumes[i-1]) / volumes[i-1] * 100);
+                }
+
+                // Correlation calculations
+                const priceCorrelation = this.calculateCorrelation(priceChanges.slice(-20), volumeChanges.slice(-20));
+                const volumeCorrelation = totalBuyerVolume / totalVolume;
+                
+                // Momentum correlation (price direction vs volume direction)
+                const recentPriceChange = (closes[closes.length - 1] - closes[closes.length - 10]) / closes[closes.length - 10];
+                const recentVolumeChange = (volumes[volumes.length - 1] - volumes[volumes.length - 10]) / volumes[volumes.length - 10];
+                const momentumCorrelation = recentPriceChange * recentVolumeChange > 0 ? 1 : 0;
+
+                // VPM Score Calculation (0-100 scale)
+                const buyerRatio = totalBuyerVolume / totalVolume;
+                const volumeStrength = Math.min(usdFlow / CONFIG.USD_FLOW_THRESHOLD, 2); // Cap at 2x threshold
+                const correlationStrength = (Math.abs(priceCorrelation) + volumeCorrelation + momentumCorrelation) / 3;
+                
+                const vmpScore = (
+                    (buyerRatio * 40) + // Buyer dominance (40%)
+                    (volumeStrength * 30) + // Volume strength (30%)
+                    (correlationStrength * 30) // Correlation strength (30%)
+                ) * 100;
+
+                // Quality assessment based on data consistency
+                const quality = this.assessQuality(data, priceChanges, volumeChanges);
+
+                return {
+                    vmpScore: Math.min(100, Math.max(0, vmpScore)),
+                    buyerVolume: totalBuyerVolume,
+                    sellerVolume: totalSellerVolume,
+                    usdFlow: usdFlow,
+                    priceCorrelation: priceCorrelation,
+                    volumeCorrelation: volumeCorrelation,
+                    momentumCorrelation: momentumCorrelation,
+                    quality: quality,
+                    buyerRatio: buyerRatio
+                };
+            }
+
+            calculateCorrelation(x, y) {
+                if (x.length !== y.length || x.length === 0) return 0;
+                
+                const n = x.length;
+                const sumX = x.reduce((a, b) => a + b, 0);
+                const sumY = y.reduce((a, b) => a + b, 0);
+                const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+                const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
+                const sumY2 = y.reduce((sum, yi) => sum + yi * yi, 0);
+
+                const numerator = n * sumXY - sumX * sumY;
+                const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+
+                return denominator === 0 ? 0 : numerator / denominator;
+            }
+
+            assessQuality(data, priceChanges, volumeChanges) {
+                // Quality factors
+                const dataCompleteness = data.length >= 100 ? 1 : data.length / 100;
+                const priceConsistency = 1 - (this.calculateVolatility(priceChanges) / 10); // Normalize volatility
+                const volumeConsistency = 1 - (this.calculateVolatility(volumeChanges) / 20);
+                
+                return Math.max(0, Math.min(1, (dataCompleteness + priceConsistency + volumeConsistency) / 3));
+            }
+
+            calculateVolatility(values) {
+                if (values.length === 0) return 0;
+                const mean = values.reduce((a, b) => a + b, 0) / values.length;
+                const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
+                return Math.sqrt(variance);
+            }
+        }
+
+        // Multi-Timeframe Labyrinth Analyzer
+        class MTFLabyrinthAnalyzer {
+            constructor() {
+                this.pathStates = new Map();
+            }
+
+            analyzeLabyrinth(timeframeResults) {
+                const paths = {
+                    '1h': this.analyzePath(timeframeResults['1h'], 'quick'),
+                    '2h': this.analyzePath(timeframeResults['2h'], 'balance'),
+                    '4h': this.analyzePath(timeframeResults['4h'], 'trend')
+                };
+
+                // Determine labyrinth status
+                const pathValues = Object.values(paths);
+                const longPaths = pathValues.filter(p => p.direction === 'long').length;
+                const shortPaths = pathValues.filter(p => p.direction === 'short').length;
+
+                let status = 'foggy'; // Default uncertain state
+                let confidence = 0.5;
+
+                if (longPaths === 3) {
+                    status = 'golden_corridor'; // All paths bullish
+                    confidence = 0.95;
+                } else if (shortPaths === 3) {
+                    status = 'red_tunnel'; // All paths bearish
+                    confidence = 0.95;
+                } else if (longPaths === 2) {
+                    status = 'bright_path'; // Bullish bias
+                    confidence = 0.75;
+                } else if (shortPaths === 2) {
+                    status = 'dark_path'; // Bearish bias
+                    confidence = 0.75;
+                }
+
+                return {
+                    paths: paths,
+                    status: status,
+                    confidence: confidence,
+                    recommendation: this.generateRecommendation(status, confidence)
+                };
+            }
+
+            analyzePath(result, pathType) {
+                if (!result) return { direction: 'neutral', strength: 0, clarity: 'foggy' };
+
+                const score = result.vmpScore || 50;
+                const quality = result.quality || 0.5;
+
+                let direction = 'neutral';
+                let strength = 0;
+                let clarity = 'foggy';
+
+                if (score > 65) {
+                    direction = 'long';
+                    strength = (score - 65) / 35; // 0-1 scale
+                } else if (score < 35) {
+                    direction = 'short';
+                    strength = (35 - score) / 35; // 0-1 scale
+                }
+
+                // Clarity based on quality and strength
+                if (quality > 0.8 && strength > 0.7) {
+                    clarity = 'bright';
+                } else if (quality > 0.6 && strength > 0.5) {
+                    clarity = 'clear';
+                } else if (quality > 0.4 && strength > 0.3) {
+                    clarity = 'dim';
+                }
+
+                return { direction, strength, clarity };
+            }
+
+            generateRecommendation(status, confidence) {
+                const recommendations = {
+                    'golden_corridor': 'Strong bullish setup - All timeframes aligned for upward movement',
+                    'red_tunnel': 'Strong bearish setup - All timeframes aligned for downward movement',
+                    'bright_path': 'Bullish bias detected - Consider long positions with proper risk management',
+                    'dark_path': 'Bearish bias detected - Consider short positions or avoid longs',
+                    'foggy': 'Mixed signals - Wait for clearer direction or use neutral strategies'
+                };
+
+                return recommendations[status] || 'Uncertain market conditions';
+            }
+        }
+
+        // Enhanced Signal Quality Assessor
+        class SignalQualityAssessor {
+            constructor() {
+                this.qualityFactors = {
+                    vmpScore: 0.3,
+                    correlation: 0.25,
+                    usdFlow: 0.2,
+                    labyrinthAlignment: 0.15,
+                    dataQuality: 0.1
+                };
+            }
+
+            assessSignalQuality(vmpResult, labyrinthResult) {
+                let totalQuality = 0;
+
+                // VPM Score factor
+                const vmpFactor = Math.min(vmpResult.vmpScore / 100, 1);
+                totalQuality += vmpFactor * this.qualityFactors.vmpScore;
+
+                // Correlation factor
+                const correlationFactor = (
+                    Math.abs(vmpResult.priceCorrelation) + 
+                    vmpResult.volumeCorrelation + 
+                    vmpResult.momentumCorrelation
+                ) / 3;
+                totalQuality += correlationFactor * this.qualityFactors.correlation;
+
+                // USD Flow factor
+                const usdFlowFactor = Math.min(vmpResult.usdFlow / (CONFIG.USD_FLOW_THRESHOLD * 2), 1);
+                totalQuality += usdFlowFactor * this.qualityFactors.usdFlow;
+
+                // Labyrinth alignment factor
+                const labyrinthFactor = labyrinthResult.confidence;
+                totalQuality += labyrinthFactor * this.qualityFactors.labyrinthAlignment;
+
+                // Data quality factor
+                totalQuality += vmpResult.quality * this.qualityFactors.dataQuality;
+
+                return Math.min(1, totalQuality);
+            }
+
+            getQualityGrade(quality) {
+                if (quality >= 0.95) return { grade: 'ELITE', color: 'text-purple-400' };
+                if (quality >= 0.9) return { grade: 'PREMIUM', color: 'text-gold-400' };
+                if (quality >= 0.8) return { grade: 'HIGH', color: 'text-green-400' };
+                if (quality >= 0.7) return { grade: 'GOOD', color: 'text-blue-400' };
+                if (quality >= 0.6) return { grade: 'FAIR', color: 'text-yellow-400' };
+                return { grade: 'LOW', color: 'text-red-400' };
+            }
+        }
+
+        // Initialize enhanced systems
+        const vmpCalculator = new VPMCalculator();
+        const mtfAnalyzer = new MTFLabyrinthAnalyzer();
+        const qualityAssessor = new SignalQualityAssessor();
+
+        // DOM Elements
+        const elements = {
+            loader: document.getElementById('loader'),
+            statusEl: document.getElementById('status'),
+            resultsTable: document.getElementById('resultsTable'),
+            vmpScanBtn: document.getElementById('vmpScanBtn'),
+            autoScanToggle: document.getElementById('autoScanToggle'),
+            historicalForm: document.getElementById('historicalForm'),
+            historicalResult: document.getElementById('historicalResult'),
+            filterPanel: document.getElementById('filterPanel'),
+            scanModeSelect: document.getElementById('scanModeSelect')
+        };
+
+        // API Functions
+        async function getSymbols() {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/fapi/v1/exchangeInfo`);
+                const data = await response.json();
+                return data.symbols
+                    .filter(s => s.contractType === 'PERPETUAL' && s.quoteAsset === 'USDT' && !s.symbol.includes('_'))
+                    .map(s => s.symbol)
+                    .slice(0, 100); // Limit for performance
+            } catch (error) {
+                console.error('Symbols fetch failed:', error);
+                showNotification('API connection failed. Please check your connection.', 'error');
+                return [];
+            }
+        }
+
+        async function getKlineData(symbol, interval, limit = CONFIG.KLINE_LIMIT, endTime = null) {
+            let url = `${CONFIG.API_BASE}/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+            if (endTime) {
+                url += `&endTime=${endTime}`;
+            }
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`API error: ${response.status}`);
+                return await response.json();
+            } catch (error) {
+                console.error(`Failed to fetch ${symbol} ${interval}:`, error);
+                return [];
+            }
+        }
+
+        // Enhanced Processing Function
+        async function processSymbolAdvanced(symbol, timeFramesToScan, scanMode) {
+            const timeFrameResults = {};
+            let currentPrice = 0;
+
+            // Fetch data for all timeframes
+            for (const tf of timeFramesToScan) {
+                const data = await getKlineData(symbol, tf);
+                if (data.length === 0) continue;
+
+                if (tf === '1h' && data.length > 0) {
+                    const lastCandle = data[data.length - 1];
+                    currentPrice = parseFloat(lastCandle[4]);
+                }
+
+                const vmpResult = await vmpCalculator.calculateVPM(data);
+                timeFrameResults[tf] = vmpResult;
+            }
+
+            // Multi-timeframe labyrinth analysis
+            const labyrinthResult = mtfAnalyzer.analyzeLabyrinth(timeFrameResults);
+
+            // Overall VPM score calculation
+            let totalScore = 0;
+            let totalWeight = 0;
+            for (const tf of timeFramesToScan) {
+                if (timeFrameResults[tf]) {
+                    totalScore += timeFrameResults[tf].vmpScore * CONFIG.TIME_FRAME_WEIGHTS[tf];
+                    totalWeight += CONFIG.TIME_FRAME_WEIGHTS[tf];
+                }
+            }
+            const overallVMPScore = totalWeight > 0 ? totalScore / totalWeight : 50;
+
+            // Signal quality assessment
+            const primaryResult = timeFrameResults['1h'] || timeFrameResults[timeFramesToScan[0]];
+            const signalQuality = qualityAssessor.assessSignalQuality(primaryResult, labyrinthResult);
+
+            // Apply quality filter based on scan mode
+            if (scanMode === 'premium_quality' && signalQuality < 0.9) return null;
+            if (scanMode === 'vmp_enhanced' && signalQuality < 0.7) return null;
+
+            return {
+                symbol,
+                currentPrice,
+                overallVMPScore,
+                signalQuality,
+                labyrinthResult,
+                timeFrameResults,
+                primaryResult
+            };
+        }
+
+        // UI Update Functions
+        function renderAdvancedRow(result) {
+            const { symbol, currentPrice, overallVMPScore, signalQuality, labyrinthResult, primaryResult } = result;
+            
+            const row = document.createElement('tr');
+            row.id = `row-${symbol}`;
+            row.className = 'hover:bg-gray-800/50 transition-colors';
+            row.dataset.vmpScore = overallVMPScore;
+            row.dataset.quality = signalQuality;
+
+            const qualityGrade = qualityAssessor.getQualityGrade(signalQuality);
+            const usdFlow = primaryResult.usdFlow;
+            const buyerRatio = primaryResult.buyerRatio;
+
+            row.innerHTML = `
+                <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-white">
+                    <a href="https://www.binance.com/tr/futures/${symbol}" target="_blank" 
+                       class="text-purple-400 hover:text-purple-300 hover:underline flex items-center">
+                        <i class="fas fa-external-link-alt mr-2 text-xs"></i>${symbol}
+                    </a>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-300">
+                    ${currentPrice > 0 ? currentPrice.toFixed(currentPrice < 1 ? 4 : 2) : '...'}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-center">
+                    <div class="enhanced-score" style="padding: 8px; margin: 0;">
+                        <div class="score-ring" style="width: 40px; height: 40px; margin: 0 auto 4px;">
+                            <div class="score-value" style="font-size: 12px;">${overallVMPScore.toFixed(0)}</div>
+                        </div>
+                        <div class="text-xs ${qualityGrade.color}">${qualityGrade.grade}</div>
+                    </div>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-center">
+                    <div class="usd-amount" style="font-size: 14px;">
+                        $${(usdFlow / 1000000).toFixed(1)}M
+                    </div>
+                    <div class="text-xs text-gray-400">Flow</div>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-center">
+                    <div class="volume-flow">
+                        <div class="buyer-volume" style="width: ${buyerRatio * 100}%; height: 4px;"></div>
+                        <div class="seller-volume" style="width: ${(1-buyerRatio) * 100}%; height: 4px; margin-top: 2px;"></div>
+                    </div>
+                    <div class="text-xs text-gray-400">${(buyerRatio * 100).toFixed(0)}% B</div>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-center">
+                    <div class="text-xs font-semibold ${getLabyrinthColor(labyrinthResult.status)}">
+                        ${getLabyrinthText(labyrinthResult.status)}
+                    </div>
+                    <div class="text-xs text-gray-400">${(labyrinthResult.confidence * 100).toFixed(0)}%</div>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-center">
+                    ${getVMPSignalHTML(overallVMPScore, signalQuality)}
+                </td>
+                ${CONFIG.ALL_TIME_FRAMES.map(tf => {
+                    const tfResult = result.timeFrameResults[tf];
+                    const hideClass = tf === '2h' ? 'desktop-only' : '';
+                    return `<td class="px-4 py-3 whitespace-nowrap text-sm text-center ${hideClass}">
+                        ${tfResult ? getTimeframeSignalHTML(tfResult.vmpScore) : '...'}
+                    </td>`;
+                }).join('')}
+            `;
+
+            elements.resultsTable.appendChild(row);
+        }
+
+        function getLabyrinthColor(status) {
+            const colors = {
+                'golden_corridor': 'text-yellow-400',
+                'red_tunnel': 'text-red-400',
+                'bright_path': 'text-green-400',
+                'dark_path': 'text-red-300',
+                'foggy': 'text-gray-400'
+            };
+            return colors[status] || 'text-gray-400';
+        }
+
+        function getLabyrinthText(status) {
+            const texts = {
+                'golden_corridor': 'GOLDEN',
+                'red_tunnel': 'RED TUNNEL',
+                'bright_path': 'BRIGHT',
+                'dark_path': 'DARK',
+                'foggy': 'FOGGY'
+            };
+            return texts[status] || 'NEUTRAL';
+        }
+
+        function getVMPSignalHTML(score, quality) {
+            const qualityGrade = qualityAssessor.getQualityGrade(quality);
+            
+            if (score > 70 && quality > 0.8) {
+                return `<span class="text-green-400 font-bold flex items-center justify-center">
+                    <i class="fas fa-rocket mr-1"></i>STRONG BUY
+                </span>`;
+            } else if (score < 30 && quality > 0.8) {
+                return `<span class="text-red-400 font-bold flex items-center justify-center">
+                    <i class="fas fa-arrow-down mr-1"></i>STRONG SELL
+                </span>`;
+            } else if (score > 60) {
+                return `<span class="text-green-300 flex items-center justify-center">
+                    <i class="fas fa-arrow-up mr-1"></i>BUY
+                </span>`;
+            } else if (score < 40) {
+                return `<span class="text-red-300 flex items-center justify-center">
+                    <i class="fas fa-arrow-down mr-1"></i>SELL
+                </span>`;
+            } else {
+                return `<span class="text-gray-400 flex items-center justify-center">
+                    <i class="fas fa-minus mr-1"></i>NEUTRAL
+                </span>`;
+            }
+        }
+
+        function getTimeframeSignalHTML(score) {
+            if (score > 70) return '<span class="text-green-400 font-bold">BUY</span>';
+            if (score < 30) return '<span class="text-red-400 font-bold">SELL</span>';
+            if (score > 60) return '<span class="text-green-300">Buy</span>';
+            if (score < 40) return '<span class="text-red-300">Sell</span>';
+            return '<span class="text-gray-500">Neutral</span>';
+        }
+
+        // Enhanced Scanning Function
+        async function startAdvancedScan(scanMode = 'vmp_standard') {
+            elements.loader.classList.remove('hidden');
+            elements.filterPanel.classList.add('hidden');
+            elements.vmpScanBtn.disabled = true;
+            elements.vmpScanBtn.innerHTML = '<i class="fas fa-brain fa-spin mr-1"></i> VPM Analyzing...';
+            elements.resultsTable.innerHTML = '';
+            
+            elements.statusEl.innerHTML = `
+                <div class="text-purple-400 flex items-center justify-center">
+                    <i class="fas fa-satellite-dish mr-2"></i>Initializing VPM engine...
+                </div>`;
+
+            const symbols = await getSymbols();
+            if (symbols.length === 0) {
+                resetScanUI();
+                return;
+            }
+
+            const timeFramesToScan = scanMode === 'labyrinth_mode' ? 
+                CONFIG.ALL_TIME_FRAMES : CONFIG.QUICK_TIME_FRAMES;
+
+            elements.statusEl.innerHTML = `
+                <div class="text-purple-400 flex items-center justify-center">
+                    <i class="fas fa-brain mr-2"></i>VPM analyzing ${symbols.length} symbols...
+                </div>`;
+
+            const validResults = [];
+            let processedCount = 0;
+
+            for (let i = 0; i < symbols.length; i += CONFIG.CONCURRENCY_LIMIT) {
+                const batch = symbols.slice(i, i + CONFIG.CONCURRENCY_LIMIT);
+                
+                elements.statusEl.innerHTML = `
+                    <div class="text-purple-400 flex items-center justify-center">
+                        <i class="fas fa-cog fa-spin mr-2"></i>Processing: ${i + 1}-${Math.min(i + CONFIG.CONCURRENCY_LIMIT, symbols.length)} / ${symbols.length}
+                    </div>`;
+
+                const promises = batch.map(symbol => processSymbolAdvanced(symbol, timeFramesToScan, scanMode));
+                const results = await Promise.all(promises);
+                
+                results.forEach(result => {
+                    if (result) {
+                        validResults.push(result);
+                        renderAdvancedRow(result);
+                    }
+                });
+
+                processedCount += batch.length;
+                const progress = (processedCount / symbols.length) * 100;
+                elements.statusEl.innerHTML = `
+                    <div class="text-purple-400 flex items-center justify-center">
+                        <i class="fas fa-brain mr-2"></i>VPM Analysis: ${progress.toFixed(0)}% Complete
+                    </div>`;
+            }
+
+            // Sort by VPM score and quality
+            const rows = Array.from(elements.resultsTable.querySelectorAll('tr'));
+            rows.sort((a, b) => {
+                const scoreA = parseFloat(a.dataset.vmpScore) || 0;
+                const scoreB = parseFloat(b.dataset.vmpScore) || 0;
+                const qualityA = parseFloat(a.dataset.quality) || 0;
+                const qualityB = parseFloat(b.dataset.quality) || 0;
+                
+                const combinedA = (scoreA * 0.7) + (qualityA * 100 * 0.3);
+                const combinedB = (scoreB * 0.7) + (qualityB * 100 * 0.3);
+                
+                return combinedB - combinedA;
+            });
+
+            rows.forEach(row => elements.resultsTable.appendChild(row));
+            
+            updateDashboardStats(validResults);
+            
+            elements.statusEl.innerHTML = `
+                <div class="text-green-500 flex items-center justify-center">
+                    <i class="fas fa-check-circle mr-2"></i>VPM analysis complete! Found ${validResults.length} quality signals.
+                </div>`;
+            
+            elements.filterPanel.classList.remove('hidden');
+            resetScanUI();
+            
+            showNotification(`VPM scan completed! Analyzed ${symbols.length} symbols, found ${validResults.length} quality opportunities.`, 'success');
+        }
+
+        function resetScanUI() {
+            elements.loader.classList.add('hidden');
+            elements.vmpScanBtn.disabled = false;
+            elements.vmpScanBtn.innerHTML = '<i class="fas fa-rocket mr-1"></i> VPM Scan';
+        }
+
+        function updateDashboardStats(results) {
+            if (results.length === 0) return;
+
+            const avgVMPScore = results.reduce((sum, r) => sum + r.overallVMPScore, 0) / results.length;
+            const avgQuality = results.reduce((sum, r) => sum + r.signalQuality, 0) / results.length;
+            const totalUSDFlow = results.reduce((sum, r) => sum + r.primaryResult.usdFlow, 0);
+            const goldenCorridors = results.filter(r => r.labyrinthResult.status === 'golden_corridor').length;
+
+            document.getElementById('vmpIndex').textContent = avgVMPScore.toFixed(0);
+            document.getElementById('signalQuality').textContent = (avgQuality * 100).toFixed(0) + '%';
+            document.getElementById('usdFlow').textContent = '$' + (totalUSDFlow / 1000000).toFixed(1) + 'M';
+            document.getElementById('activePatterns').textContent = goldenCorridors;
+
+            // Update quality bar
+            const qualityBar = document.querySelector('.bg-gradient-to-r.from-purple-500.to-pink-500');
+            if (qualityBar) {
+                qualityBar.style.width = (avgQuality * 100) + '%';
+            }
+        }
+
+        // Enhanced Historical Analysis
+        async function analyzeHistoricalVPM(symbol, date, time, vmpMode = 'standard') {
+            elements.historicalResult.innerHTML = `
+                <p class="text-purple-400 flex items-center">
+                    <i class="fas fa-brain fa-spin mr-2"></i>VPM analyzing historical data...
+                </p>`;
+            
+            const timestamp = new Date(`${date}T${time}:00Z`).getTime();
+            if (isNaN(timestamp)) {
+                elements.historicalResult.innerHTML = `
+                    <p class="text-red-500">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>Error: Invalid date or time format.
+                    </p>`;
+                return;
+            }
+            
+            let resultsHTML = `<div class="glass p-4 rounded-md border border-purple-500/30">`;
+            resultsHTML += `
+                <h3 class="text-lg font-bold text-white mb-4 flex items-center">
+                    <i class="fas fa-chart-area text-purple-400 mr-2"></i>
+                    ${symbol} - VPM Historical Analysis
+                </h3>`;
+            
+            const timeFrameResults = {};
+            
+            for (const tf of CONFIG.ALL_TIME_FRAMES) {
+                const data = await getKlineData(symbol, tf, CONFIG.KLINE_LIMIT, timestamp);
+                if (data.length > 0) {
+                    timeFrameResults[tf] = await vmpCalculator.calculateVPM(data);
+                }
+            }
+
+            const labyrinthResult = mtfAnalyzer.analyzeLabyrinth(timeFrameResults);
+            
+            resultsHTML += `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">`;
+            
+            for (const tf of CONFIG.ALL_TIME_FRAMES) {
+                const result = timeFrameResults[tf];
+                if (result) {
+                    resultsHTML += `
+                        <div class="text-center p-3 glass rounded-lg">
+                            <p class="text-xs text-gray-400 uppercase font-medium">${tf}</p>
+                            <p class="text-lg font-bold mt-1 ${getVMPScoreColor(result.vmpScore)}">${result.vmpScore.toFixed(0)}</p>
+                            <div class="text-xs text-gray-500 mt-1">Quality: ${(result.quality * 100).toFixed(0)}%</div>
+                        </div>
+                    `;
+                }
+            }
+            
+            resultsHTML += `</div>`;
+            
+            // Labyrinth visualization
+            resultsHTML += `
+                <div class="mtf-labyrinth mb-4">
+                    <h4 class="text-sm font-medium text-white mb-3">MTF Labyrinth Status</h4>
+                    <div class="p-3 rounded-lg ${getLabyrinthBgColor(labyrinthResult.status)}">
+                        <p class="text-center font-bold text-white">${getLabyrinthText(labyrinthResult.status)}</p>
+                        <p class="text-center text-xs text-gray-200 mt-1">
+                            Confidence: ${(labyrinthResult.confidence * 100).toFixed(0)}%
+                        </p>
+                        <p class="text-xs text-gray-200 mt-2">${labyrinthResult.recommendation}</p>
+                    </div>
+                </div>`;
+            
+            resultsHTML += `</div>`;
+            elements.historicalResult.innerHTML = resultsHTML;
+        }
+
+        function getVMPScoreColor(score) {
+            if (score > 70) return 'text-green-400';
+            if (score < 30) return 'text-red-400';
+            if (score > 60) return 'text-green-300';
+            if (score < 40) return 'text-red-300';
+            return 'text-gray-300';
+        }
+
+        function getLabyrinthBgColor(status) {
+            const colors = {
+                'golden_corridor': 'bg-gradient-to-r from-yellow-600 to-yellow-500',
+                'red_tunnel': 'bg-gradient-to-r from-red-600 to-red-500',
+                'bright_path': 'bg-gradient-to-r from-green-600 to-green-500',
+                'dark_path': 'bg-gradient-to-r from-red-500 to-red-600',
+                'foggy': 'bg-gradient-to-r from-gray-600 to-gray-500'
+            };
+            return colors[status] || 'bg-gray-600';
+        }
+
+        // Notification System
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `glass p-4 rounded-lg border-l-4 ${getNotificationBorder(type)} max-w-md`;
+            notification.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas ${getNotificationIcon(type)} mr-3 ${getNotificationColor(type)}"></i>
+                        <span class="text-white">${message}</span>
+                    </div>
+                    <button class="ml-4 text-gray-400 hover:text-white" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('notificationContainer').appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        function getNotificationIcon(type) {
+            const icons = {
+                'success': 'fa-check-circle',
+                'error': 'fa-exclamation-circle',
+                'info': 'fa-info-circle',
+                'warning': 'fa-exclamation-triangle'
+            };
+            return icons[type] || 'fa-info-circle';
+        }
+
+        function getNotificationColor(type) {
+            const colors = {
+                'success': 'text-green-400',
+                'error': 'text-red-400',
+                'info': 'text-blue-400',
+                'warning': 'text-yellow-400'
+            };
+            return colors[type] || 'text-blue-400';
+        }
+
+        function getNotificationBorder(type) {
+            const borders = {
+                'success': 'border-green-400',
+                'error': 'border-red-400',
+                'info': 'border-blue-400',
+                'warning': 'border-yellow-400'
+            };
+            return borders[type] || 'border-blue-400';
+        }
+
+        // Event Listeners
+        elements.vmpScanBtn?.addEventListener('click', () => {
+            const scanMode = elements.scanModeSelect?.value || 'vmp_standard';
+            startAdvancedScan(scanMode);
+        });
+
+        elements.historicalForm?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const symbol = e.target.symbol.value.toUpperCase();
+            const date = e.target.date.value;
+            const time = e.target.time.value;
+            const vmpMode = document.getElementById('vmpModeSelect').value;
+
+            if (!symbol || !date || !time) {
+                showNotification('Please fill in all fields', 'warning');
+                return;
+            }
+            
+            analyzeHistoricalVPM(symbol, date, time, vmpMode);
+        });
+
+        // Filter functionality
+        document.getElementById('applyFilterBtn')?.addEventListener('click', () => {
+            const vmpScore = parseFloat(document.getElementById('vmpScoreFilter').value) || 0;
+            const usdFlow = document.getElementById('usdFlowFilter').value;
+            const labyrinth = document.getElementById('labyrinthFilter').value;
+            const quality = document.getElementById('qualityFilterSelect').value;
+            
+            const rows = elements.resultsTable.querySelectorAll('tr');
+            let visibleCount = 0;
+            
+            rows.forEach(row => {
+                const rowVMPScore = parseFloat(row.dataset.vmpScore) || 0;
+                const rowQuality = parseFloat(row.dataset.quality) || 0;
+                
+                let shouldShow = rowVMPScore >= vmpScore;
+                
+                if (quality === 'premium' && rowQuality < 0.9) shouldShow = false;
+                if (quality === 'elite' && rowQuality < 0.95) shouldShow = false;
+                
+                if (shouldShow) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            elements.statusEl.innerHTML = `
+                <div class="text-purple-400 flex items-center justify-center">
+                    <i class="fas fa-filter mr-2"></i>Filter applied: ${visibleCount} results shown
+                </div>`;
+        });
+
+        document.getElementById('resetFilterBtn')?.addEventListener('click', () => {
+            const rows = elements.resultsTable.querySelectorAll('tr');
+            rows.forEach(row => row.style.display = '');
+            
+            document.getElementById('vmpScoreFilter').value = 70;
+            document.getElementById('usdFlowFilter').value = 'all';
+            document.getElementById('labyrinthFilter').value = 'all';
+            document.getElementById('qualityFilterSelect').value = 'all';
+            
+            elements.statusEl.innerHTML = `
+                <div class="text-green-500 flex items-center justify-center">
+                    <i class="fas fa-check mr-2"></i>Filters reset. All results shown.
+                </div>`;
+        });
+
+        // VPM Score filter slider update
+        document.getElementById('vmpScoreFilter')?.addEventListener('input', (e) => {
+            document.getElementById('vmpScoreValue').textContent = e.target.value + '+';
+        });
+
+        // Initialize
+        async function initialize() {
+            console.log('🚀 Advanced VPM Scanner initializing...');
+            
+            // Set default date/time
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            const dateStr = now.toISOString().slice(0,10);
+            const timeStr = now.toISOString().slice(11,16);
+            document.getElementById('dateInput').value = dateStr;
+            document.getElementById('timeInput').value = timeStr;
+            
+            // Show welcome message
+            showNotification('🧠 Advanced VPM Scanner ready! Powered by Ozican Method™ for superior signal quality.', 'success');
+            
+            console.log('✅ VPM System initialized');
+        }
+
+        // Start the application
+        initialize();
+    </script>
+</body>
+</html>
